@@ -89,7 +89,6 @@ impl Game {
       }
     };
 
-
     let handle = thread::spawn(move || -> Result<()> {
       ui.lock().unwrap()
         .print_snake(&snake.lock().unwrap())?;
