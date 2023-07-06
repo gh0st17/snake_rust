@@ -13,7 +13,7 @@ use std::{
 };
 
 use atomic::Atomic;
-use crossterm::event::*;
+use crossterm::{event::*, terminal};
 
 pub struct Game {
   running_thread_handles: Vec<JoinHandle<()>>,
@@ -22,7 +22,8 @@ pub struct Game {
   dir: Arc<Atomic<Direction>>,
   snake: Arc<Mutex<Snake>>,
   ui: Arc<Mutex<UI>>,
-  field_size: (u16, u16)
+  field_size: (u16, u16),
+  terminal_size: (u16, u16)
 }
 
 impl Game {
@@ -34,7 +35,8 @@ impl Game {
       dir: Arc::new(Atomic::new(Direction::RIGHT)),
       field_size: ui.field_size,
       snake: Arc::new(Mutex::new(Snake::new())),
-      ui: Arc::new(Mutex::new(ui))
+      ui: Arc::new(Mutex::new(ui)),
+      terminal_size: terminal::size().unwrap()
     }
   }
 
@@ -50,10 +52,11 @@ impl Game {
         t2 = Instant::now();
         ui.lock().unwrap().print_time(&(t2 - t1).as_secs_f64());
 
-        sleep(Duration::from_millis(100));
-
         if stop_bool.load(Ordering::Relaxed) {
           break;
+        }
+        else {
+          sleep(Duration::from_millis(100));
         }
       }
   
@@ -90,12 +93,14 @@ impl Game {
             "Сам себя съел!"
           );
           stop_bool.store(true, Ordering::Relaxed);
+          break;
         }
-
-        sleep(Duration::from_millis(175));
 
         if stop_bool.load(Ordering::Relaxed) {
           break;
+        }
+        else {
+          sleep(Duration::from_millis(175));
         }
       }
     });
@@ -133,6 +138,7 @@ impl Game {
             "Прерывание..."
           );
           stop_bool.store(true, Ordering::Relaxed);
+          break;
         }
       }
     });
@@ -190,6 +196,7 @@ impl Game {
             "Съел кирпич!"
           );
           stop_bool.store(true, Ordering::Relaxed);
+          break;
         }
 
         if stop_bool.load(Ordering::Relaxed) {
@@ -203,6 +210,25 @@ impl Game {
 
     self.running_thread_handles.push(handle);
   }
+
+  pub fn terminal_size_checker(&mut self) {
+    let stop_bool = self.is_over.clone();
+    let terminal_size = self.terminal_size.clone();
+
+    let handle = thread::spawn(move || {
+      loop {     
+        if terminal_size != terminal::size().unwrap() {
+          stop_bool.store(true, Ordering::Relaxed);
+          break;
+        }
+        else {
+          sleep(Duration::from_millis(300));
+        }
+      }
+    });
+
+    self.running_thread_handles.push(handle);
+  } 
 
   pub fn stop(&mut self) {
     self.is_over.store(true, Ordering::Relaxed);
