@@ -9,8 +9,28 @@ pub struct Food {
 }
 
 impl Food {
-  pub fn new(symbol: char, pos: (u16, u16), value: u16, color: Color) -> Self {
-    Food{ symbol, pos, value, color }
+  pub fn new(pos: (u16, u16)) -> Self {
+    Food{
+      symbol: ' ',
+      pos,
+      value: 0,
+      color: Color::White 
+    }
+  }
+
+  pub fn symbol(mut self, symbol: char) -> Food {
+    self.symbol = symbol;
+    self
+  }
+
+  pub fn value(mut self, value: u16) -> Food {
+    self.value = value;
+    self
+  }
+
+  pub fn color(mut self, color: Color) -> Food {
+    self.color = color;
+    self
   }
 
   pub fn get_symbol(&self) -> char {
@@ -37,14 +57,23 @@ impl Food {
     if kind {
       let apple = rng.gen_range(0..=1u16);
       if apple == 0 {
-        food = Food::new('◉', (x, y), 10, Color::Green);
+        food = Food::new((x, y))
+          .symbol('◉')
+          .value(10)
+          .color(Color::Green);
       }
       else {
-        food = Food::new('◉', (x, y), 20, Color::Yellow);
+        food = Food::new((x, y))
+          .symbol('◉')
+          .value(20)
+          .color(Color::Yellow);
       }
     }
     else {
-      food = Food::new('▃', (x, y), 0, Color::Red);
+      food = Food::new((x, y))
+        .symbol('▃')
+        .value(0)
+        .color(Color::Red);
     }
 
     food

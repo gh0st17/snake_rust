@@ -85,7 +85,10 @@ impl Game {
       ui.lock().unwrap().print_snake(&snake.lock().unwrap());
       loop {
         snake.lock().unwrap().set_direction(dir.load(Ordering::Relaxed));
-        let last_pos = snake.lock().unwrap().update(field_size);
+        let last_pos = snake
+                                    .lock()
+                                    .unwrap()
+                                    .update(field_size);
         ui.lock().unwrap().clear_char(last_pos);
         ui.lock().unwrap().print_snake(&snake.lock().unwrap());
         if snake.lock().unwrap().check_self_eaten() {
