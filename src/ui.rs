@@ -48,6 +48,14 @@ impl UI {
       exit(1);
     }
 
+    for _ in 0..height {
+      execute!(
+        io::stdout(),
+        SetColors(Colors::new(Cyan, Black)),
+        Print(format!("{: <1$}", "", width as usize))
+      ).unwrap();
+    }
+
     width  = 23 + (width  - DEFAULT_WIDTH);
     height = 22 + (height - DEFAULT_HEIGHT);
     UI { field_size: (width, height) }

@@ -162,10 +162,26 @@ impl Game {
           );
           let pos = food.get_pos();
           snake.lock().unwrap().add_part(pos);
-          food = Food::generate_food(&field_size, true);
+          
+          loop {
+            food = Food::generate_food(&field_size, true);
+
+            if !snake.lock().unwrap().check_pos(food.get_pos()) {
+              break;
+            }
+          }
+
           ui.lock().unwrap().print_food(&food);
           ui.lock().unwrap().clear_char(brick.get_pos());
-          brick = Food::generate_food(&field_size, false);
+
+          loop {
+            brick = Food::generate_food(&field_size, false);
+
+            if !snake.lock().unwrap().check_pos(brick.get_pos()) {
+              break;
+            }
+          }
+
           ui.lock().unwrap().print_food(&brick);
         }
 
