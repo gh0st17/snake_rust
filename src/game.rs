@@ -4,6 +4,7 @@ use crate::ui::UI;
 
 use std::time::Instant;
 use std::{
+  io::{Result},
   thread::{sleep, self, JoinHandle},
   time::Duration,
   sync::{
@@ -16,7 +17,6 @@ use atomic::Atomic;
 use crossterm::{event::*, terminal};
 
 pub struct Game {
-  running_thread_handles: Vec<JoinHandle<()>>,
   is_over: Arc<AtomicBool>,
   score: Arc<AtomicU16>,
   dir: Arc<Atomic<Direction>>,
@@ -29,7 +29,6 @@ pub struct Game {
 impl Game {
   pub fn new(ui: UI) -> Self {
     Game {
-      running_thread_handles: Vec::new(),
       is_over: Arc::new(AtomicBool::new(false)),
       score: Arc::new(AtomicU16::new(0)),
       dir: Arc::new(Atomic::new(Direction::RIGHT)),
@@ -40,24 +39,18 @@ impl Game {
     }
   }
 
-  pub fn time(&mut self) {
+  pub fn time(&mut self) -> Result<JoinHandle<Result<()>>>  {
     let stop_bool = self.is_over.clone();
     let ui = self.ui.clone();
 
-    let handle = thread::spawn(move || { 
+    let handle = thread::spawn(move || -> Result<()> { 
       let mut t2: Instant;
       let t1 = Instant::now();
   
       loop {
         t2 = Instant::now();
-        
-        let result = ui.lock().unwrap().print_time(&(t2 - t1).as_secs_f64());
-        match result {
-          Ok(_) => (),
-          Err(err) => {
-            panic!("Ошибка при печати времени: {}", err)
-          }
-        };
+
+        ui.lock().unwrap().print_time(&(t2 - t1).as_secs_f64())?;
 
         if stop_bool.load(Ordering::Relaxed) {
           break;
@@ -66,13 +59,14 @@ impl Game {
           sleep(Duration::from_millis(100));
         }
       }
-  
+
+      Ok(())  
     });
 
-    self.running_thread_handles.push(handle);
+    Ok(handle)
   }
 
-  pub fn snake_update(&mut self) {
+  pub fn snake_update(&mut self) -> Result<JoinHandle<Result<()>>>  {
     let stop_bool = self.is_over.clone();
     let dir = self.dir.clone();
     let snake = self.snake.clone();
@@ -96,69 +90,21 @@ impl Game {
     };
 
 
-    let handle = thread::spawn(move || {
-      let result = ui
-        .lock()
-        .unwrap()
-        .print_snake(&snake.lock().unwrap());
-      match result {
-        Ok(_) => (),
-        Err(err) => {
-          panic!("Ошибка при печати змейки: {}", err)
-        }
-      }
+    let handle = thread::spawn(move || -> Result<()> {
+      ui.lock().unwrap()
+        .print_snake(&snake.lock().unwrap())?;
 
       loop {
         snake.lock().unwrap().set_direction(dir.load(Ordering::Relaxed));
-        let last_pos = snake
-                                    .lock()
-                                    .unwrap()
-                                    .update(field_size);
+        let last_pos = snake.lock().unwrap().update(field_size);
 
-        let result = ui
-          .lock()
-          .unwrap()
-          .clear_char(last_pos);
-        match result {
-          Ok(_) => (),
-          Err(err) => {
-            panic!("{}", err)
-          }
-        }
-
-        let result = ui
-          .lock()
-          .unwrap()
-          .print_snake(&snake.lock().unwrap());
-        match result {
-          Ok(_) => (),
-          Err(err) => {
-            panic!("Ошибка при печати змейки: {}", err)
-          }
-        }
-
-        let result = ui
-          .lock()
-          .unwrap()
-          .print_snake(&snake.lock().unwrap());
-        match result {
-          Ok(_) => (),
-          Err(err) => {
-            panic!("Ошибка при печати змейки: {}", err)
-          }
-        }
+        ui.lock().unwrap().clear_char(last_pos)?;
+        ui.lock().unwrap().print_snake(&snake.lock().unwrap())?;
+        ui.lock().unwrap().print_snake(&snake.lock().unwrap())?;
 
         if snake.lock().unwrap().check_self_eaten() {
-          let result = ui
-            .lock()
-            .unwrap()
-            .print_end_game_message("Сам себя съел!");
-          match result {
-            Ok(_) => (),
-            Err(err) => {
-              panic!("{}", err)
-            }
-          }
+          ui.lock().unwrap()
+            .print_end_game_message("Сам себя съел!")?;
 
           stop_bool.store(true, Ordering::Relaxed);
           break;
@@ -171,17 +117,19 @@ impl Game {
           sleep(Duration::from_millis(175));
         }
       }
+
+      Ok(())
     });
 
-    self.running_thread_handles.push(handle);
+    Ok(handle)
   }
 
-  pub fn fetch_key(&mut self) {
+  pub fn fetch_key(&mut self) -> Result<JoinHandle<Result<()>>>  {
     let stop_bool = self.is_over.clone();
     let ui = self.ui.clone();
     let dir = self.dir.clone();
 
-    let handle = thread::spawn(move || {
+    let handle = thread::spawn(move || -> Result<()> {
       loop {
         let event = read().unwrap();
 
@@ -202,67 +150,42 @@ impl Game {
           dir.store(Direction::RIGHT, Ordering::Relaxed);
         }
         if event == Event::Key(KeyCode::Esc.into()) {
-          let result = ui
-            .lock()
-            .unwrap()
-            .print_end_game_message("Прерывание...");
-          match result {
-            Ok(_) => (),
-            Err(err) => {
-              panic!("{}", err)
-            }
-          }
+          ui.lock().unwrap()
+            .print_end_game_message("Прерывание...")?;
 
           stop_bool.store(true, Ordering::Relaxed);
           break;
         }
       }
+
+      Ok(())
     });
 
-    self.running_thread_handles.push(handle);
+    Ok(handle)
   }
 
-  pub fn food_generator(&mut self) {
+  pub fn food_generator(&mut self) -> Result<JoinHandle<Result<()>>> {
     let stop_bool = self.is_over.clone();
     let snake = self.snake.clone();
     let ui = self.ui.clone();
     let field_size = Arc::new(self.field_size);
     let score = self.score.clone();
 
-    let handle = thread::spawn(move || {
+    let handle = thread::spawn(move || -> Result<()> {
       let mut food = Food::generate_food(&field_size, true);
       let mut brick = Food::generate_food(&field_size, false);
 
-      let result = ui.lock().unwrap().print_food(&food);
-      match result {
-        Ok(_) => (),
-        Err(err) => {
-          panic!("Ошибка при печати еды: {}", err)
-        }
-      }
-
-      let result = ui.lock().unwrap().print_food(&brick);
-      match result {
-        Ok(_) => (),
-        Err(err) => {
-          panic!("Ошибка при печати кирпича: {}", err)
-        }
-      }
+      ui.lock().unwrap().print_food(&food)?;
+      ui.lock().unwrap().print_food(&brick)?;
 
       loop {
         if snake.lock().unwrap().check_pos(food.get_pos()) {
           score.fetch_add(food.get_value(), Ordering::SeqCst);
 
-          let result = ui.lock().unwrap().print_stats(
+          ui.lock().unwrap().print_stats(
             &score.load(Ordering::Relaxed),
             &(snake.lock().unwrap().get_parts().len() as u16)
-          );
-          match result {
-            Ok(_) => (),
-            Err(err) => {
-              panic!("Ошибка при печати статистики: {}", err)
-            }
-          }
+          )?;
 
           let pos = food.get_pos();
           snake.lock().unwrap().add_part(pos);
@@ -275,21 +198,8 @@ impl Game {
             }
           }
 
-          let result = ui.lock().unwrap().print_food(&food);
-          match result {
-            Ok(_) => (),
-            Err(err) => {
-              panic!("Ошибка при печати еды: {}", err)
-            }
-          }
-
-          let result = ui.lock().unwrap().clear_char(brick.get_pos());
-          match result {
-            Ok(_) => (),
-            Err(err) => {
-              panic!("{}", err)
-            }
-          }
+          ui.lock().unwrap().print_food(&food)?;
+          ui.lock().unwrap().clear_char(brick.get_pos())?;
 
           loop {
             brick = Food::generate_food(&field_size, false);
@@ -299,27 +209,12 @@ impl Game {
             }
           }
 
-          let result = ui.lock().unwrap().print_food(&brick);
-          match result {
-            Ok(_) => (),
-            Err(err) => {
-              panic!("Ошибка при печати кирпича: {}", err)
-            }
-          }
+          ui.lock().unwrap().print_food(&brick)?;
         }
 
         if snake.lock().unwrap().check_pos(brick.get_pos()) {
-          let result = ui
-            .lock()
-            .unwrap()
-            .print_end_game_message("Съел кирпич!");
-
-          match result {
-            Ok(_) => (),
-            Err(err) => {
-              panic!("{}", err)
-            }
-          }
+          ui.lock().unwrap()
+            .print_end_game_message("Съел кирпич!")?;
 
           stop_bool.store(true, Ordering::Relaxed);
           break;
@@ -332,16 +227,18 @@ impl Game {
           sleep(Duration::from_millis(150));
         }
       }
+
+      Ok(())
     });
 
-    self.running_thread_handles.push(handle);
+    Ok(handle)
   }
 
-  pub fn terminal_size_checker(&mut self) {
+  pub fn terminal_size_checker(&mut self) -> Result<JoinHandle<Result<()>>>  {
     let stop_bool = self.is_over.clone();
     let terminal_size = self.terminal_size.clone();
 
-    let handle = thread::spawn(move || {
+    let handle = thread::spawn(move || -> Result<()> {
       loop {     
         if terminal_size != terminal::size().unwrap() {
           stop_bool.store(true, Ordering::Relaxed);
@@ -351,9 +248,11 @@ impl Game {
           sleep(Duration::from_millis(300));
         }
       }
+
+      Ok(())
     });
 
-    self.running_thread_handles.push(handle);
+    Ok(handle)
   } 
 
   pub fn stop(&mut self) {

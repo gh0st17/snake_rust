@@ -35,11 +35,13 @@ fn main() {
 
   let mut game = Game::new(ui);
 
-  game.time();
-  game.fetch_key();
-  game.snake_update();
-  game.food_generator();
-  game.terminal_size_checker();
+  let _ = vec![
+    game.time(),
+    game.fetch_key(),
+    game.snake_update(),
+    game.food_generator(),
+    game.terminal_size_checker()
+  ];
 
   while !game.is_over() {
    sleep(Duration::from_secs(3));
