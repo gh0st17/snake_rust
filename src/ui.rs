@@ -11,8 +11,7 @@ use std::{
 use crossterm::{
   terminal::{*, self},
   cursor::{MoveTo, self},
-  {
-    self,
+  style::{
     Print,
     Color::*,
     *
