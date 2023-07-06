@@ -272,6 +272,7 @@ impl Drop for UI {
   fn drop(&mut self) {
     execute!(
       io::stdout(),
+      Clear(ClearType::All),
       cursor::Show,
       ResetColor
     ).unwrap();
