@@ -263,7 +263,7 @@ impl UI {
     execute!(
       io::stdout(),
       MoveTo(pos.0, pos.1),
-      Print(" ".to_string())
+      Print(" ")
     )
   }
 }
