@@ -18,7 +18,7 @@ fn main() {
       panic!("Не могу инициализировать интерфейс: {}", err)
     }
   };
-  
+
   match ui.print_frame() {
     Ok(_) => (),
     Err(err) => {

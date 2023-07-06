@@ -20,7 +20,7 @@ use crossterm::{
 };
 
 const DEFAULT_WIDTH: u16 = 80;
-const DEFAULT_HEIGHT: u16 = 24;
+const DEFAULT_HEIGHT: u16 = 13;
 
 pub struct UI {
   pub field_size: (u16, u16)
@@ -30,23 +30,20 @@ impl UI {
   pub fn new() -> Result<UI> {
     enable_raw_mode()
       .expect("Could not turn on Raw mode");
+
+    let (mut width, mut height) = crossterm::terminal::size()?;
+
+    if width < DEFAULT_WIDTH || height < DEFAULT_HEIGHT {
+      println!("Минимальный размер терминала {} столбцов {} строк",
+      DEFAULT_WIDTH, DEFAULT_HEIGHT);
+      exit(1);
+    }
     
     execute!(
       io::stdout(),
       terminal::Clear(ClearType::All),
       cursor::Hide
     )?;
-
-    let (mut width, mut height) = crossterm::terminal::size()?;
-
-    if width < DEFAULT_WIDTH || height < DEFAULT_HEIGHT {
-      execute!(
-        io::stdout(),
-        Print(format!("Минимальный размер терминала {} столбцов {} строк",
-          DEFAULT_WIDTH, DEFAULT_HEIGHT))
-      )?;
-      exit(1);
-    }
 
     for _ in 0..height {
       execute!(
@@ -57,7 +54,7 @@ impl UI {
     }
 
     width  = 23 + (width  - DEFAULT_WIDTH);
-    height = 22 + (height - DEFAULT_HEIGHT);
+    height = 11 + (height - DEFAULT_HEIGHT);
     Ok(UI { field_size: (width, height) })
   }
 
@@ -134,8 +131,6 @@ impl UI {
 
       execute!(
         io::stdout(),
-        SetAttribute(Attribute::Bold),
-        SetColors(Colors::new(Green, Black)),
         MoveTo(pos.0, pos.1),
         Print(format!("{}", symbol))
       )?;
