@@ -35,13 +35,22 @@ fn main() {
 
   let mut game = Game::new(ui);
 
-  let _ = vec![
+  let threads = vec![
     game.time(),
     game.fetch_key(),
     game.snake_update(),
     game.food_generator(),
     game.terminal_size_checker()
   ];
+
+  for thread in threads {
+    match thread {
+      Ok(_) => (),
+      Err(err) => {
+        panic!("{}", err);
+      }
+    }
+  }
 
   while !game.is_over() {
    sleep(Duration::from_secs(3));
