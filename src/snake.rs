@@ -44,7 +44,7 @@ impl SnakePart {
     if self.pos_y == 0 {
       self.pos_y = max_size.1;
     }
-    else if self.pos_y == max_size.1 + 1{
+    else if self.pos_y == max_size.1 + 1 {
       self.pos_y = 1;
     }
   }

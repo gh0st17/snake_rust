@@ -9,7 +9,7 @@ pub struct Food {
 }
 
 impl Food {
-  pub fn new(pos: (u16, u16)) -> Self {
+  pub fn new(pos: (u16, u16)) -> Food {
     Food{
       symbol: ' ',
       pos,

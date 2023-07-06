@@ -12,9 +12,26 @@ use std::{
 };
 
 fn main() {
-  let ui = UI::new();
-  ui.print_frame();
-  ui.print_help();
+  let ui = match UI::new() {
+    Ok(ui) => ui,
+    Err(err) => {
+      panic!("Не могу инициализировать интерфейс: {}", err)
+    }
+  };
+  
+  match ui.print_frame() {
+    Ok(_) => (),
+    Err(err) => {
+      panic!("Ошибка при отрисовке рамки: {}", err)
+    }
+  };
+  
+  match ui.print_help() {
+    Ok(_) => (),
+    Err(err) => {
+      panic!("Ошибка при печати инструкции: {}", err)
+    }
+  };
 
   let mut game = Game::new(ui);
 

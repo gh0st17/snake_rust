@@ -3,7 +3,7 @@ use crate::{snake::Snake, food::Food};
 
 use std::{
   process::exit,
-  io::{self},
+  io::{self, Result},
   thread::sleep,
   time::Duration
 };
@@ -27,7 +27,7 @@ pub struct UI {
 }
 
 impl UI {
-  pub fn new() -> Self {
+  pub fn new() -> Result<UI> {
     enable_raw_mode()
       .expect("Could not turn on Raw mode");
     
@@ -35,16 +35,16 @@ impl UI {
       io::stdout(),
       terminal::Clear(ClearType::All),
       cursor::Hide
-    ).unwrap();
+    )?;
 
-    let (mut width, mut height) = crossterm::terminal::size().unwrap();
+    let (mut width, mut height) = crossterm::terminal::size()?;
 
     if width < DEFAULT_WIDTH || height < DEFAULT_HEIGHT {
       execute!(
         io::stdout(),
-        Print(format!("Минимательный размер терминала {} столбцов {} строк",
+        Print(format!("Минимальный размер терминала {} столбцов {} строк",
           DEFAULT_WIDTH, DEFAULT_HEIGHT))
-      ).unwrap();
+      )?;
       exit(1);
     }
 
@@ -53,15 +53,15 @@ impl UI {
         io::stdout(),
         SetColors(Colors::new(Cyan, Black)),
         Print(format!("{: <1$}", "", width as usize))
-      ).unwrap();
+      )?;
     }
 
     width  = 23 + (width  - DEFAULT_WIDTH);
     height = 22 + (height - DEFAULT_HEIGHT);
-    UI { field_size: (width, height) }
+    Ok(UI { field_size: (width, height) })
   }
 
-  pub fn print_frame(&self) {
+  pub fn print_frame(&self) -> Result<()> {
     let terminal_size = terminal::size().unwrap();
     let substract = terminal_size.0 - self.field_size.0;
     let half = (substract as usize - 17) / 2;
@@ -85,14 +85,14 @@ impl UI {
       Print(format!("{:═<1$}╗", "", half)),
       MoveTo(1, self.field_size.1 + 1),
       Print(format!("╚{:═<1$}╝", "", self.field_size.0 as usize))
-    ).unwrap();
+    )?;
 
     for y in 1..=(self.field_size.1) { // Поле
       execute!(
         io::stdout(),
         MoveTo(1, y),
         Print(format!("║{: <1$}║", "", self.field_size.0 as usize))
-      ).unwrap();
+      )?;
     }
 
     for y in 1..=3 { // Статистика
@@ -100,7 +100,7 @@ impl UI {
         io::stdout(),
         MoveTo(self.field_size.0 + 4, y),
         Print(format!("║{: <1$}║", "", 20))
-      ).unwrap();
+      )?;
     }
 
     for y in 6..=11 { // Инструкция
@@ -108,19 +108,17 @@ impl UI {
         io::stdout(),
         MoveTo(self.field_size.0 + 4, y),
         Print(format!("║{: <1$}║", "", substract as usize - 6))
-      ).unwrap();
+      )?;
     }
 
     execute!(
       io::stdout(),
-
       MoveTo(self.field_size.0 + 4, 12),
       Print(format!("╚{:═<1$}╝", "", substract as usize - 6))
-    ).unwrap();
-
+    )
   }
 
-  pub fn print_snake(&self, snake: &Snake) {
+  pub fn print_snake(&self, snake: &Snake) -> Result<()> {
     let mut symbol: char;
     let mut pos: (u16, u16);
 
@@ -128,7 +126,7 @@ impl UI {
       io::stdout(),
       SetAttribute(Attribute::Bold),
       SetColors(Colors::new(Green, Black)),
-    ).unwrap();
+    )?;
 
     for part in snake.get_parts() {
       symbol = part.get_symbol();
@@ -140,17 +138,17 @@ impl UI {
         SetColors(Colors::new(Green, Black)),
         MoveTo(pos.0, pos.1),
         Print(format!("{}", symbol))
-      ).unwrap();
+      )?;
     }
 
     execute!(
       io::stdout(),
       SetAttribute(Attribute::NormalIntensity)
-    ).unwrap();
+    )
 
   }
 
-  pub fn print_help(&self) {
+  pub fn print_help(&self) -> Result<()> {
     execute!(
       io::stdout(),
       SetColors(Colors::new(Cyan, Black)),
@@ -179,10 +177,10 @@ impl UI {
       Print("▃"),
       SetColors(Colors::new(Cyan, Black)),
       Print(" ."),
-    ).unwrap();
+    )
   }
 
-  pub fn print_stats(&self, score: &u16, s_length: &u16) {
+  pub fn print_stats(&self, score: &u16, s_length: &u16) -> Result<()> {
     execute!(
       io::stdout(),
       MoveTo(self.field_size.0 + 5, 1),
@@ -200,10 +198,10 @@ impl UI {
       SetColors(Colors::new(Magenta, Black)),
       SetAttribute(Attribute::NormalIntensity),
       Print(format!("{}", s_length))
-    ).unwrap();
+    )
   }
 
-  pub fn print_time(&self, time: &f64) {
+  pub fn print_time(&self, time: &f64) -> Result<()> {
     let minutes = (time / 60.0f64).floor();
     let seconds = time % 60.0f64;
 
@@ -216,10 +214,10 @@ impl UI {
       SetColors(Colors::new(Magenta, Black)),
       SetAttribute(Attribute::NormalIntensity),
       Print(format!("{}м{:.1}с ", minutes as u64, seconds))
-    ).unwrap();
+    )
   }
 
-  pub fn print_end_game_message(&self, message: &str) {
+  pub fn print_end_game_message(&self, message: &str) -> Result<()> {
     let mut origin = terminal::size().unwrap();
     let char_count = message.chars().count();
     origin.0 /= 2;
@@ -232,7 +230,7 @@ impl UI {
       SetAttribute(Attribute::Bold),
       SetColors(Colors::new(DarkRed, Black)),
       cursor::Show
-    ).unwrap();
+    )?;
 
     execute!(
       io::stdout(),
@@ -249,27 +247,29 @@ impl UI {
       Print(message),
       SetAttribute(Attribute::NormalIntensity),
       MoveTo(0, 0)
-    ).unwrap();
+    )?;
 
     sleep(Duration::from_secs(3));
+
+    Ok(())
   }
 
-  pub fn print_food(&self, food: &Food) {
+  pub fn print_food(&self, food: &Food) -> Result<()> {
     let pos = food.get_pos();
     execute!(
       io::stdout(),
       MoveTo(pos.0, pos.1),
       SetColors(Colors::new(food.get_color(), Black)),
       Print(food.get_symbol()),
-    ).unwrap();
+    )
   }
 
-  pub fn clear_char(&self, pos: (u16, u16)) {
+  pub fn clear_char(&self, pos: (u16, u16)) -> Result<()> {
     execute!(
       io::stdout(),
       MoveTo(pos.0, pos.1),
       Print(" ".to_string())
-    ).unwrap();
+    )
   }
 }
 
