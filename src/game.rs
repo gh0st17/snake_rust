@@ -1,6 +1,6 @@
 use crate::snake::{Snake, Direction};
 use crate::food::Food;
-use crate::ui::UI;
+use crate::ui::{UI, Pos};
 
 use std::time::Instant;
 use std::{
@@ -22,7 +22,7 @@ pub struct Game {
   dir: Arc<Atomic<Direction>>,
   snake: Arc<Mutex<Snake>>,
   ui: Arc<Mutex<UI>>,
-  field_size: (u16, u16),
+  field_size: Pos,
   terminal_size: (u16, u16)
 }
 
@@ -171,8 +171,9 @@ impl Game {
     let score = self.score.clone();
 
     let handle = thread::spawn(move || -> Result<()> {
-      let mut food = Food::generate_food(&field_size, true);
-      let mut brick = Food::generate_food(&field_size, false);
+      let mut snake_pos = snake.lock().unwrap().get_pos();
+      let mut food = Food::generate_food(&field_size, true, snake_pos);
+      let mut brick = Food::generate_food(&field_size, false, snake_pos);
 
       ui.lock().unwrap().print_food(&food)?;
       ui.lock().unwrap().print_food(&brick)?;
@@ -189,8 +190,9 @@ impl Game {
           let pos = food.get_pos();
           snake.lock().unwrap().add_part(pos);
           
+          snake_pos = snake.lock().unwrap().get_pos();
           loop {
-            food = Food::generate_food(&field_size, true);
+            food = Food::generate_food(&field_size, true, snake_pos);
 
             if !snake.lock().unwrap().check_pos(food.get_pos()) {
               break;
@@ -201,7 +203,7 @@ impl Game {
           ui.lock().unwrap().clear_char(brick.get_pos())?;
 
           loop {
-            brick = Food::generate_food(&field_size, false);
+            brick = Food::generate_food(&field_size, false, snake_pos);
 
             if !snake.lock().unwrap().check_pos(brick.get_pos()) {
               break;

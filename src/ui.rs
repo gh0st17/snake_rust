@@ -22,6 +22,8 @@ use crossterm::{
 const DEFAULT_WIDTH: u16 = 80;
 const DEFAULT_HEIGHT: u16 = 13;
 
+pub type Pos = (u16, u16);
+
 pub struct UI {
   pub field_size: (u16, u16)
 }

@@ -1,25 +1,25 @@
+use crate::ui::Pos;
+
 #[derive(Copy, Clone)]
 pub enum Direction { UP, DOWN, LEFT, RIGHT }
 
 #[derive(Copy, Clone)]
 pub struct SnakePart {
   symbol: char,
-  pos_x: u16,
-  pos_y: u16
+  pos: Pos
 }
 
 impl SnakePart {
-  pub fn new(symbol: char, pos_x: u16, pos_y: u16) -> SnakePart {
-    SnakePart { symbol, pos_x, pos_y }
+  pub fn new(symbol: char, pos: Pos) -> SnakePart {
+    SnakePart { symbol, pos }
   }
 
-  pub fn get_pos(&self) -> (u16, u16) {
-    (self.pos_x, self.pos_y)
+  pub fn get_pos(&self) -> Pos {
+    self.pos
   }
 
-  pub fn set_pos(&mut self, new_pos: (u16, u16)) {
-    self.pos_x = new_pos.0;
-    self.pos_y = new_pos.1;
+  pub fn set_pos(&mut self, new_pos: Pos) {
+    self.pos = new_pos;
   }
 
   pub fn get_symbol(&self) -> char {
@@ -28,24 +28,24 @@ impl SnakePart {
 
   pub fn update(&mut self, dir: Direction, max_size: (u16, u16)) {
     match dir {
-      Direction::UP    => self.pos_y -= 1,
-      Direction::DOWN  => self.pos_y += 1,
-      Direction::LEFT  => self.pos_x -= 1,
-      Direction::RIGHT => self.pos_x += 1
+      Direction::UP    => self.pos.1 -= 1,
+      Direction::DOWN  => self.pos.1 += 1,
+      Direction::LEFT  => self.pos.0 -= 1,
+      Direction::RIGHT => self.pos.0 += 1
     }
 
-    if self.pos_x == 1 {
-      self.pos_x = max_size.0 + 1;
+    if self.pos.0 == 1 {
+      self.pos.0 =  max_size.0 + 1;
     }
-    else if self.pos_x == max_size.0 + 2 {
-      self.pos_x = 2;
+    else if self.pos.0 == max_size.0 + 2 {
+      self.pos.0 = 2;
     }
 
-    if self.pos_y == 0 {
-      self.pos_y = max_size.1;
+    if self.pos.1 == 0 {
+      self.pos.1 = max_size.1;
     }
-    else if self.pos_y == max_size.1 + 1 {
-      self.pos_y = 1;
+    else if self.pos.1 == max_size.1 + 1 {
+      self.pos.1 = 1;
     }
   }
 }
@@ -58,7 +58,7 @@ pub struct Snake {
 impl Snake {
   pub fn new() -> Snake {
     Snake {
-      parts: vec![SnakePart::new('O', 3, 1)],
+      parts: vec![SnakePart::new('O', (3, 1))],
       dir: Direction::RIGHT
     }
   }
@@ -67,7 +67,7 @@ impl Snake {
     &self.parts
   }
 
-  pub fn update(&mut self, max_size: (u16, u16)) -> (u16, u16) {
+  pub fn update(&mut self, max_size: Pos) -> Pos {
     let mut prev_pos = self.parts[0].get_pos();
     let mut new_pos = prev_pos.clone();
 
@@ -103,11 +103,9 @@ impl Snake {
        }
   }
 
-  pub fn add_part(&mut self, pos: (u16, u16)) {
+  pub fn add_part(&mut self, pos: Pos) {
     self.parts.push(SnakePart {
-      symbol: 'o',
-      pos_x: pos.0, 
-      pos_y: pos.1
+      symbol: 'o', pos
     })
   }
 
@@ -125,7 +123,7 @@ impl Snake {
     false
   }
 
-  pub fn check_pos(&self, pos: (u16, u16)) -> bool {
+  pub fn check_pos(&self, pos: Pos) -> bool {
     for part in &self.parts {
       if pos == part.get_pos() {
         return true;
@@ -134,4 +132,9 @@ impl Snake {
 
     false
   }
+
+  pub fn get_pos(&self) -> Pos {
+    self.parts[0].get_pos()
+  }
+
 }
