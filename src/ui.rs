@@ -137,7 +137,9 @@ impl UI {
       execute!(
         io::stdout(),
         MoveTo(pos.0, pos.1),
-        Print(format!("{}", symbol).with(DarkGreen).bold())
+        Print(format!("{}", symbol)
+          .with(part.get_color())
+          .bold())
       )?;
     }
     
@@ -158,8 +160,10 @@ impl UI {
       Print("B".with(Magenta).bold()),
       Print(" - переключает режим ускорения.".with(Cyan)),
       MoveTo(self.field_size.0 + 5, 8),
+      Print("P".with(Magenta).bold()),
+      Print(" - пауза. ".with(Cyan)),
       Print("ESC".with(Magenta).bold()),
-      Print(" для выхода.".with(Cyan)),
+      Print(" для выхода. ".with(Cyan)),
       MoveTo(self.field_size.0 + 5, 10),
       Print("Зеленые ".with(Cyan)),
       Print("◉".with(Green)),
@@ -228,7 +232,7 @@ impl UI {
     origin.0 /= 2;
     origin.1 /= 2;
     origin.0 -= (char_count as u16 / 2) + 2;
-    origin.1 -= 1;
+    origin.1 -= 2;
 
     execute!(
       io::stdout(),

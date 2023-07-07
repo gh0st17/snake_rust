@@ -1,3 +1,5 @@
+use crossterm::style::Color::{self, *};
+
 use crate::ui::Pos;
 
 #[derive(Copy, Clone)]
@@ -6,12 +8,13 @@ pub enum Direction { UP, DOWN, LEFT, RIGHT }
 #[derive(Copy, Clone)]
 pub struct SnakePart {
   symbol: char,
-  pos: Pos
+  pos: Pos,
+  color: Color
 }
 
 impl SnakePart {
   pub fn new(symbol: char, pos: Pos) -> SnakePart {
-    SnakePart { symbol, pos }
+    SnakePart { symbol, pos, color: DarkGreen }
   }
 
   pub fn get_pos(&self) -> Pos {
@@ -24,6 +27,14 @@ impl SnakePart {
 
   pub fn get_symbol(&self) -> char {
     self.symbol
+  }
+
+  pub fn get_color(&self) -> Color {
+    self.color
+  }
+
+  pub fn set_color(&mut self, color: Color) {
+    self.color = color;
   }
 
   pub fn update(&mut self, dir: Direction, max_size: Pos) {
@@ -104,9 +115,7 @@ impl Snake {
   }
 
   pub fn add_part(&mut self, pos: Pos) {
-    self.parts.push(SnakePart {
-      symbol: 'o', pos
-    })
+    self.parts.push(SnakePart::new('o', pos));
   }
 
   pub fn check_self_eaten(&self) -> bool {
@@ -135,6 +144,11 @@ impl Snake {
 
   pub fn get_pos(&self) -> Pos {
     self.parts[0].get_pos()
+  }
+
+  pub fn set_head_color(&mut self, color: Color) {
+    let head = &mut self.parts[0];
+    head.set_color(color);
   }
 
 }

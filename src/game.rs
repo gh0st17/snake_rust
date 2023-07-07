@@ -13,7 +13,11 @@ use std::{
 };
 
 use atomic::Atomic;
-use crossterm::{event::*, terminal};
+use crossterm::{
+  event::*,
+  terminal,
+  style::Color::*
+};
 
 pub struct Game {
   is_over: Arc<AtomicBool>,
@@ -103,7 +107,7 @@ impl Game {
 
       loop {
         if pause.load(Ordering::Acquire) {
-          sleep(Duration::from_millis(500));
+          sleep(Duration::from_millis(100));
           continue;
         }
 
@@ -144,6 +148,7 @@ impl Game {
     let stop_bool = self.is_over.clone();
     let pause = self.pause.clone();
     let boost: Arc<AtomicBool> = self.boost.clone();
+    let snake = self.snake.clone();
     let ui = self.ui.clone();
     let dir = self.dir.clone();
 
@@ -168,6 +173,19 @@ impl Game {
             event == Event::Key(KeyCode::Right.into()) {
             dir.store(Direction::RIGHT, Ordering::Release);
           }
+
+          if event == Event::Key(KeyCode::Char('b').into()) {
+            let _boost = boost.load(Ordering::Acquire);
+            boost.store(!_boost, Ordering::Release);
+            let mut _snake = snake.lock().unwrap();
+
+            if !_boost {
+              _snake.set_head_color(Cyan);
+            }
+            else {
+              _snake.set_head_color(DarkGreen);
+            }
+          }
         }
 
         if event == Event::Key(KeyCode::Char('p').into()) {
@@ -182,11 +200,6 @@ impl Game {
           else {
             _ui.set_alternate(false)?;
           }
-        }
-
-        if event == Event::Key(KeyCode::Char('b').into()) {
-          let _boost = boost.load(Ordering::Acquire);
-          boost.store(!_boost, Ordering::Release);
         }
 
         if event == Event::Key(KeyCode::Esc.into()) {
@@ -222,7 +235,7 @@ impl Game {
 
       loop {
         if pause.load(Ordering::Acquire) {
-          sleep(Duration::from_millis(500));
+          sleep(Duration::from_millis(100));
           continue;
         }
 
@@ -252,7 +265,8 @@ impl Game {
           loop {
             brick = Food::generate_food(&field_size, false, snake_pos);
 
-            if !snake.lock().unwrap().check_pos(brick.get_pos()) {
+            if !snake.lock().unwrap().check_pos(brick.get_pos()) &&
+                food.get_pos() != brick.get_pos() {
               break;
             }
           }
@@ -309,11 +323,5 @@ impl Game {
 
   pub fn is_over(&self) -> bool {
     self.is_over.load(Ordering::Acquire)
-  }
-}
-
-impl Drop for Game {
-  fn drop(&mut self) {
-    self.stop();
   }
 }
