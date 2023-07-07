@@ -17,6 +17,7 @@ use crossterm::{event::*, terminal};
 
 pub struct Game {
   is_over: Arc<AtomicBool>,
+  pause: Arc<AtomicBool>,
   boost: Arc<AtomicBool>,
   score: Arc<AtomicU16>,
   dir: Arc<Atomic<Direction>>,
@@ -30,6 +31,7 @@ impl Game {
   pub fn new(ui: UI) -> Self {
     Game {
       is_over: Arc::new(AtomicBool::new(false)),
+      pause: Arc::new(AtomicBool::new(false)),
       boost: Arc::new(AtomicBool::new(false)),
       score: Arc::new(AtomicU16::new(0)),
       dir: Arc::new(Atomic::new(Direction::RIGHT)),
@@ -42,6 +44,7 @@ impl Game {
 
   pub fn time(&mut self) -> Result<JoinHandle<Result<()>>>  {
     let stop_bool = self.is_over.clone();
+    let pause = self.pause.clone();
     let ui = self.ui.clone();
 
     let handle = thread::spawn(move || -> Result<()> { 
@@ -51,9 +54,11 @@ impl Game {
       loop {
         t2 = Instant::now();
 
-        ui.lock().unwrap().print_time(&(t2 - t1).as_secs_f64())?;
+        if !pause.load(Ordering::Acquire) {
+          ui.lock().unwrap().print_time(&(t2 - t1).as_secs_f64())?;
+        }
 
-        if stop_bool.load(Ordering::Relaxed) {
+        if stop_bool.load(Ordering::Acquire) {
           break;
         }
         else {
@@ -69,6 +74,7 @@ impl Game {
 
   pub fn snake_update(&mut self) -> Result<JoinHandle<Result<()>>>  {
     let stop_bool = self.is_over.clone();
+    let pause = self.pause.clone();
     let boost = self.boost.clone();
     let dir = self.dir.clone();
     let snake = self.snake.clone();
@@ -81,7 +87,7 @@ impl Game {
       .lock()
       .unwrap()
       .print_stats(
-        &self.score.load(Ordering::Relaxed),
+        &self.score.load(Ordering::Acquire),
         &s_length
       );
     match result {
@@ -96,7 +102,12 @@ impl Game {
         .print_snake(&snake.lock().unwrap())?;
 
       loop {
-        snake.lock().unwrap().set_direction(dir.load(Ordering::Relaxed));
+        if pause.load(Ordering::Acquire) {
+          sleep(Duration::from_millis(500));
+          continue;
+        }
+
+        snake.lock().unwrap().set_direction(dir.load(Ordering::Acquire));
         let last_pos = snake.lock().unwrap().update(field_size);
 
         ui.lock().unwrap().clear_char(last_pos)?;
@@ -106,15 +117,15 @@ impl Game {
           ui.lock().unwrap()
             .print_end_game_message("Сам себя съел!")?;
 
-          stop_bool.store(true, Ordering::Relaxed);
+          stop_bool.store(true, Ordering::Release);
           break;
         }
 
-        if stop_bool.load(Ordering::Relaxed) {
+        if stop_bool.load(Ordering::Acquire) {
           break;
         }
         else {
-          if boost.load(Ordering::Relaxed) {
+          if boost.load(Ordering::Acquire) {
             sleep(Duration::from_millis(125))
           }
           else {
@@ -131,6 +142,7 @@ impl Game {
 
   pub fn fetch_key(&mut self) -> Result<JoinHandle<Result<()>>>  {
     let stop_bool = self.is_over.clone();
+    let pause = self.pause.clone();
     let boost: Arc<AtomicBool> = self.boost.clone();
     let ui = self.ui.clone();
     let dir = self.dir.clone();
@@ -139,37 +151,49 @@ impl Game {
       loop {
         let event = read().unwrap();
 
-        if event == Event::Key(KeyCode::Char('w').into()) || 
-           event == Event::Key(KeyCode::Up.into()) {
-          dir.store(Direction::UP, Ordering::Relaxed);
+        if !pause.load(Ordering::Acquire) {
+          if event == Event::Key(KeyCode::Char('w').into()) || 
+            event == Event::Key(KeyCode::Up.into()) {
+            dir.store(Direction::UP, Ordering::Release);
+          }
+          if event == Event::Key(KeyCode::Char('s').into()) || 
+            event == Event::Key(KeyCode::Down.into()) {
+            dir.store(Direction::DOWN, Ordering::Release);
+          }
+          if event == Event::Key(KeyCode::Char('a').into()) || 
+            event == Event::Key(KeyCode::Left.into()) {
+            dir.store(Direction::LEFT, Ordering::Release);
+          }
+          if event == Event::Key(KeyCode::Char('d').into()) || 
+            event == Event::Key(KeyCode::Right.into()) {
+            dir.store(Direction::RIGHT, Ordering::Release);
+          }
         }
-        if event == Event::Key(KeyCode::Char('s').into()) || 
-           event == Event::Key(KeyCode::Down.into()) {
-          dir.store(Direction::DOWN, Ordering::Relaxed);
-        }
-        if event == Event::Key(KeyCode::Char('a').into()) || 
-           event == Event::Key(KeyCode::Left.into()) {
-          dir.store(Direction::LEFT, Ordering::Relaxed);
-        }
-        if event == Event::Key(KeyCode::Char('d').into()) || 
-           event == Event::Key(KeyCode::Right.into()) {
-          dir.store(Direction::RIGHT, Ordering::Relaxed);
+
+        if event == Event::Key(KeyCode::Char('p').into()) {
+          let _pause = pause.load(Ordering::Acquire);
+          pause.store(!_pause, Ordering::Release);
+          let _ui = ui.lock().unwrap();
+
+          if !_pause {
+            _ui.set_alternate(true)?;
+            _ui.print_end_game_message("Пауза")?;
+          }
+          else {
+            _ui.set_alternate(false)?;
+          }
         }
 
         if event == Event::Key(KeyCode::Char('b').into()) {
-          if !boost.load(Ordering::Relaxed) {
-            boost.store(true, Ordering::Relaxed);
-          }
-          else {
-            boost.store(false, Ordering::Relaxed);
-          }
+          let _boost = boost.load(Ordering::Acquire);
+          boost.store(!_boost, Ordering::Release);
         }
 
         if event == Event::Key(KeyCode::Esc.into()) {
           ui.lock().unwrap()
             .print_end_game_message("Прерывание...")?;
 
-          stop_bool.store(true, Ordering::Relaxed);
+          stop_bool.store(true, Ordering::Release);
           break;
         }
       }
@@ -182,6 +206,7 @@ impl Game {
 
   pub fn food_generator(&mut self) -> Result<JoinHandle<Result<()>>> {
     let stop_bool = self.is_over.clone();
+    let pause = self.pause.clone();
     let snake = self.snake.clone();
     let ui = self.ui.clone();
     let field_size = Arc::new(self.field_size);
@@ -196,11 +221,16 @@ impl Game {
       ui.lock().unwrap().print_food(&brick)?;
 
       loop {
+        if pause.load(Ordering::Acquire) {
+          sleep(Duration::from_millis(500));
+          continue;
+        }
+
         if snake.lock().unwrap().check_pos(food.get_pos()) {
           score.fetch_add(food.get_value(), Ordering::SeqCst);
 
           ui.lock().unwrap().print_stats(
-            &score.load(Ordering::Relaxed),
+            &score.load(Ordering::Acquire),
             &(snake.lock().unwrap().get_parts().len() as u16)
           )?;
 
@@ -234,11 +264,11 @@ impl Game {
           ui.lock().unwrap()
             .print_end_game_message("Съел кирпич!")?;
 
-          stop_bool.store(true, Ordering::Relaxed);
+          stop_bool.store(true, Ordering::Release);
           break;
         }
 
-        if stop_bool.load(Ordering::Relaxed) {
+        if stop_bool.load(Ordering::Acquire) {
           break;
         }
         else {
@@ -259,7 +289,7 @@ impl Game {
     let handle = thread::spawn(move || -> Result<()> {
       loop {
         if terminal_size != terminal::size().unwrap() {
-          stop_bool.store(true, Ordering::Relaxed);
+          stop_bool.store(true, Ordering::Release);
           break;
         }
         else {
@@ -274,11 +304,11 @@ impl Game {
   } 
 
   pub fn stop(&mut self) {
-    self.is_over.store(true, Ordering::Relaxed);
+    self.is_over.store(true, Ordering::Release);
   }
 
   pub fn is_over(&self) -> bool {
-    self.is_over.load(Ordering::Relaxed)
+    self.is_over.load(Ordering::Acquire)
   }
 }
 

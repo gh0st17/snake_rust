@@ -77,7 +77,7 @@ impl UI {
 
       MoveTo(self.field_size.0 + 4, 5),
       Print(format!("╔{:═<1$}", "", half - 1).with(Cyan).bold()),
-      Print(" Инструкция ".with(Cyan)),
+      Print(" Инструкция ".with(Magenta)),
       Print(format!("{:═<1$}╗", "", half).with(Cyan).bold()),
       MoveTo(1, self.field_size.1 + 1),
       Print(format!(
@@ -207,12 +207,27 @@ impl UI {
     )
   }
 
+  pub fn set_alternate(&self, is_alternate: bool) -> Result<()> {
+    if is_alternate {
+      execute!(
+        io::stdout(),
+        EnterAlternateScreen
+      )
+    }
+    else {
+      execute!(
+        io::stdout(),
+        LeaveAlternateScreen
+      )
+    }
+  }
+
   pub fn print_end_game_message(&self, message: &str) -> Result<()> {
-    let mut origin = terminal::size().unwrap();
+    let mut origin = terminal::size()?;
     let char_count = message.chars().count();
     origin.0 /= 2;
     origin.1 /= 2;
-    origin.0 -= char_count as u16 / 2;
+    origin.0 -= (char_count as u16 / 2) + 2;
     origin.1 -= 1;
 
     execute!(
