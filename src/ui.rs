@@ -127,7 +127,7 @@ impl UI {
       SetColors(Colors::new(Green, Black)),
     )?;
 
-    for part in snake.get_parts() {
+    for part in snake.get_parts().iter().rev() {
       symbol = part.get_symbol();
       pos = part.get_pos();
 

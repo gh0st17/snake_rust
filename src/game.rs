@@ -99,7 +99,6 @@ impl Game {
 
         ui.lock().unwrap().clear_char(last_pos)?;
         ui.lock().unwrap().print_snake(&snake.lock().unwrap())?;
-        ui.lock().unwrap().print_snake(&snake.lock().unwrap())?;
 
         if snake.lock().unwrap().check_self_eaten() {
           ui.lock().unwrap()
