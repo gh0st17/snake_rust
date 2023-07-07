@@ -1,12 +1,11 @@
 use crate::snake::{Snake, Direction};
 use crate::food::Food;
-use crate::ui::{UI, Pos};
+use crate::ui::UI;
 
-use std::time::Instant;
 use std::{
   io::{Result},
   thread::{sleep, self, JoinHandle},
-  time::Duration,
+  time::{Duration, Instant},
   sync::{
     Arc, Mutex,
     atomic::{AtomicBool, AtomicU16, Ordering}
@@ -18,11 +17,12 @@ use crossterm::{event::*, terminal};
 
 pub struct Game {
   is_over: Arc<AtomicBool>,
+  boost: Arc<AtomicBool>,
   score: Arc<AtomicU16>,
   dir: Arc<Atomic<Direction>>,
   snake: Arc<Mutex<Snake>>,
   ui: Arc<Mutex<UI>>,
-  field_size: Pos,
+  field_size: (u16, u16),
   terminal_size: (u16, u16)
 }
 
@@ -30,6 +30,7 @@ impl Game {
   pub fn new(ui: UI) -> Self {
     Game {
       is_over: Arc::new(AtomicBool::new(false)),
+      boost: Arc::new(AtomicBool::new(false)),
       score: Arc::new(AtomicU16::new(0)),
       dir: Arc::new(Atomic::new(Direction::RIGHT)),
       field_size: ui.field_size,
@@ -68,6 +69,7 @@ impl Game {
 
   pub fn snake_update(&mut self) -> Result<JoinHandle<Result<()>>>  {
     let stop_bool = self.is_over.clone();
+    let boost = self.boost.clone();
     let dir = self.dir.clone();
     let snake = self.snake.clone();
     let ui = self.ui.clone();
@@ -112,7 +114,12 @@ impl Game {
           break;
         }
         else {
-          sleep(Duration::from_millis(175));
+          if boost.load(Ordering::Relaxed) {
+            sleep(Duration::from_millis(125))
+          }
+          else {
+            sleep(Duration::from_millis(225));
+          }
         }
       }
 
@@ -124,6 +131,7 @@ impl Game {
 
   pub fn fetch_key(&mut self) -> Result<JoinHandle<Result<()>>>  {
     let stop_bool = self.is_over.clone();
+    let boost: Arc<AtomicBool> = self.boost.clone();
     let ui = self.ui.clone();
     let dir = self.dir.clone();
 
@@ -147,6 +155,16 @@ impl Game {
            event == Event::Key(KeyCode::Right.into()) {
           dir.store(Direction::RIGHT, Ordering::Relaxed);
         }
+
+        if event == Event::Key(KeyCode::Char('b').into()) {
+          if !boost.load(Ordering::Relaxed) {
+            boost.store(true, Ordering::Relaxed);
+          }
+          else {
+            boost.store(false, Ordering::Relaxed);
+          }
+        }
+
         if event == Event::Key(KeyCode::Esc.into()) {
           ui.lock().unwrap()
             .print_end_game_message("Прерывание...")?;
@@ -239,7 +257,7 @@ impl Game {
     let terminal_size = self.terminal_size.clone();
 
     let handle = thread::spawn(move || -> Result<()> {
-      loop {     
+      loop {
         if terminal_size != terminal::size().unwrap() {
           stop_bool.store(true, Ordering::Relaxed);
           break;

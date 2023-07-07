@@ -20,7 +20,7 @@ use crossterm::{
 };
 
 const MINIMUM_WIDTH: u16 = 80;
-const MINIMUM_HEIGHT: u16 = 13;
+const MINIMUM_HEIGHT: u16 = 14;
 
 pub type Pos = (u16, u16);
 
@@ -56,7 +56,7 @@ impl UI {
     }
 
     width  = 23 + (width  - MINIMUM_WIDTH);
-    height = 11 + (height - MINIMUM_HEIGHT);
+    height = 12 + (height - MINIMUM_HEIGHT);
     Ok(UI { field_size: (width, height) })
   }
 
@@ -102,7 +102,7 @@ impl UI {
       )?;
     }
 
-    for y in 6..=11 { // Инструкция
+    for y in 6..=12 { // Инструкция
       execute!(
         io::stdout(),
         MoveTo(self.field_size.0 + 4, y),
@@ -112,7 +112,7 @@ impl UI {
 
     execute!(
       io::stdout(),
-      MoveTo(self.field_size.0 + 4, 12),
+      MoveTo(self.field_size.0 + 4, 13),
       Print(format!("╚{:═<1$}╝", "", substract as usize - 6))
     )
   }
@@ -152,8 +152,10 @@ impl UI {
       MoveTo(self.field_size.0 + 5, 6),
       Print("Клавиши для перемещения - WASD или стрелки."),
       MoveTo(self.field_size.0 + 5, 7),
+      Print("B - переключает режим ускорения."),
+      MoveTo(self.field_size.0 + 5, 8),
       Print("ESC для выхода."),
-      MoveTo(self.field_size.0 + 5, 9),
+      MoveTo(self.field_size.0 + 5, 10),
       Print("Зеленые "),
       SetColors(Colors::new(Green, Black)),
       Print("◉"),
@@ -163,9 +165,9 @@ impl UI {
       Print("◉"),
       SetColors(Colors::new(Cyan, Black)),
       Print(" яблоки добавляют 10 и 20"),
-      MoveTo(self.field_size.0 + 5, 10),
-      Print("очков соответственно. Игра заканчивается когда"),
       MoveTo(self.field_size.0 + 5, 11),
+      Print("очков соответственно. Игра заканчивается когда"),
+      MoveTo(self.field_size.0 + 5, 12),
       SetColors(Colors::new(DarkGreen, Black)),
       Print("Змея"),
       SetColors(Colors::new(Cyan, Black)),
