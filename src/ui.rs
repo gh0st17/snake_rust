@@ -19,8 +19,8 @@ use crossterm::{
   execute
 };
 
-const DEFAULT_WIDTH: u16 = 80;
-const DEFAULT_HEIGHT: u16 = 13;
+const MINIMUM_WIDTH: u16 = 80;
+const MINIMUM_HEIGHT: u16 = 13;
 
 pub type Pos = (u16, u16);
 
@@ -35,9 +35,9 @@ impl UI {
 
     let (mut width, mut height) = crossterm::terminal::size()?;
 
-    if width < DEFAULT_WIDTH || height < DEFAULT_HEIGHT {
+    if width < MINIMUM_WIDTH || height < MINIMUM_HEIGHT {
       println!("Минимальный размер терминала {} столбцов {} строк",
-      DEFAULT_WIDTH, DEFAULT_HEIGHT);
+      MINIMUM_WIDTH, MINIMUM_HEIGHT);
       exit(1);
     }
     
@@ -55,8 +55,8 @@ impl UI {
       )?;
     }
 
-    width  = 23 + (width  - DEFAULT_WIDTH);
-    height = 11 + (height - DEFAULT_HEIGHT);
+    width  = 23 + (width  - MINIMUM_WIDTH);
+    height = 11 + (height - MINIMUM_HEIGHT);
     Ok(UI { field_size: (width, height) })
   }
 
