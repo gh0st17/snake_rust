@@ -53,6 +53,6 @@ fn main() {
   }
 
   while !game.is_over() {
-   sleep(Duration::from_secs(3));
+   sleep(Duration::from_secs(1));
   }
 }
