@@ -50,8 +50,7 @@ impl UI {
     for _ in 0..height {
       execute!(
         io::stdout(),
-        SetColors(Colors::new(Cyan, Black)),
-        Print(format!("{: <1$}", "", width as usize))
+        Print(format!("{: <1$}", "", width as usize).with(Cyan))
       )?;
     }
 
@@ -67,30 +66,34 @@ impl UI {
     execute!(
       io::stdout(),
       MoveTo(1, 0),
-      SetColors(Colors::new(Cyan, Black)),
-      Print(format!("╔{:═<1$}╗ ╔════", "", self.field_size.0 as usize)),
-      SetColors(Colors::new(Magenta, Black)),
-      Print(format!(" Статистика ")),
-      SetColors(Colors::new(Cyan, Black)),
-      Print(format!("════╗")),
+      Print(format!(
+        "╔{:═<1$}╗ ╔════", "",
+        self.field_size.0 as usize
+      ).with(Cyan).bold()),
+      Print(format!(" Статистика ").with(Magenta)),
+      Print(format!("════╗").with(Cyan).bold()),
       MoveTo(self.field_size.0 + 4, 4),
-      Print(format!("╚{:═<1$}╝", "", 20)),
+      Print(format!("╚{:═<1$}╝", "", 20).with(Cyan).bold()),
 
       MoveTo(self.field_size.0 + 4, 5),
-      Print(format!("╔{:═<1$}", "", half - 1)),
-      SetColors(Colors::new(Magenta, Black)),
-      Print(format!(" Инструкция ")),
-      SetColors(Colors::new(Cyan, Black)),
-      Print(format!("{:═<1$}╗", "", half)),
+      Print(format!("╔{:═<1$}", "", half - 1).with(Cyan).bold()),
+      Print(" Инструкция ".with(Cyan)),
+      Print(format!("{:═<1$}╗", "", half).with(Cyan).bold()),
       MoveTo(1, self.field_size.1 + 1),
-      Print(format!("╚{:═<1$}╝", "", self.field_size.0 as usize))
+      Print(format!(
+        "╚{:═<1$}╝", "",
+        self.field_size.0 as usize
+      ).with(Cyan).bold())
     )?;
 
     for y in 1..=(self.field_size.1) { // Поле
       execute!(
         io::stdout(),
         MoveTo(1, y),
-        Print(format!("║{: <1$}║", "", self.field_size.0 as usize))
+        Print(format!(
+          "║{: <1$}║", "",
+          self.field_size.0 as usize
+        ).with(Cyan).bold())
       )?;
     }
 
@@ -98,7 +101,7 @@ impl UI {
       execute!(
         io::stdout(),
         MoveTo(self.field_size.0 + 4, y),
-        Print(format!("║{: <1$}║", "", 20))
+        Print(format!("║{: <1$}║", "", 20).with(Cyan).bold())
       )?;
     }
 
@@ -106,26 +109,26 @@ impl UI {
       execute!(
         io::stdout(),
         MoveTo(self.field_size.0 + 4, y),
-        Print(format!("║{: <1$}║", "", substract as usize - 6))
+        Print(format!(
+          "║{: <1$}║", "",
+          substract as usize - 6
+        ).with(Cyan).bold())
       )?;
     }
 
     execute!(
       io::stdout(),
       MoveTo(self.field_size.0 + 4, 13),
-      Print(format!("╚{:═<1$}╝", "", substract as usize - 6))
+      Print(format!(
+        "╚{:═<1$}╝", "",
+        substract as usize - 6
+      ).with(Cyan).bold())
     )
   }
 
   pub fn print_snake(&self, snake: &Snake) -> Result<()> {
     let mut symbol: char;
     let mut pos: Pos;
-
-    execute!(
-      io::stdout(),
-      SetAttribute(Attribute::Bold),
-      SetColors(Colors::new(Green, Black)),
-    )?;
 
     for part in snake.get_parts().iter().rev() {
       symbol = part.get_symbol();
@@ -134,48 +137,42 @@ impl UI {
       execute!(
         io::stdout(),
         MoveTo(pos.0, pos.1),
-        Print(format!("{}", symbol))
+        Print(format!("{}", symbol).with(DarkGreen).bold())
       )?;
     }
-
-    execute!(
-      io::stdout(),
-      SetAttribute(Attribute::NormalIntensity)
-    )
-
+    
+    Ok(())
   }
 
   pub fn print_help(&self) -> Result<()> {
     execute!(
       io::stdout(),
-      SetColors(Colors::new(Cyan, Black)),
       MoveTo(self.field_size.0 + 5, 6),
-      Print("Клавиши для перемещения - WASD (англ. раскладка)"),
+      Print("Клавиши для перемещения - ".with(Cyan)),
+      Print("WASD".with(Magenta).bold()),
+      Print(" (англ. раскладка)".with(Cyan)),
       MoveTo(self.field_size.0 + 5, 7),
-      Print("или стрелки. B - переключает режим ускорения."),
+      Print("или стрелки. ".with(Cyan)),
+      Print("B".with(Magenta).bold()),
+      Print(" - переключает режим ускорения.".with(Cyan)),
       MoveTo(self.field_size.0 + 5, 8),
-      Print("ESC для выхода."),
+      Print("ESC".with(Magenta).bold()),
+      Print(" для выхода.".with(Cyan)),
       MoveTo(self.field_size.0 + 5, 10),
-      Print("Зеленые "),
-      SetColors(Colors::new(Green, Black)),
-      Print("◉"),
-      SetColors(Colors::new(Cyan, Black)),
-      Print(" и золотые "),
-      SetColors(Colors::new(Yellow, Black)),
-      Print("◉"),
-      SetColors(Colors::new(Cyan, Black)),
-      Print(" яблоки добавляют 10 и 20"),
+      Print("Зеленые ".with(Cyan)),
+      Print("◉".with(Green)),
+      Print(" и золотые ".with(Cyan)),
+      Print("◉".with(Yellow)),
+      Print(" яблоки добавляют 10 и 20".with(Cyan)),
       MoveTo(self.field_size.0 + 5, 11),
-      Print("очков соответственно. Игра заканчивается когда"),
+      Print(
+        "очков соответственно. Игра заканчивается когда"
+        .with(Cyan)),
       MoveTo(self.field_size.0 + 5, 12),
-      SetColors(Colors::new(DarkGreen, Black)),
-      Print("Змея"),
-      SetColors(Colors::new(Cyan, Black)),
-      Print(" ест саму себя или кирпич "),
-      SetColors(Colors::new(Red, Black)),
-      Print("▃"),
-      SetColors(Colors::new(Cyan, Black)),
-      Print(" ."),
+      Print("Змея".with(DarkGreen)),
+      Print(" ест саму себя или кирпич ".with(Cyan)),
+      Print("▃".with(Red)),
+      Print(" .".with(Cyan)),
     )
   }
 
@@ -183,20 +180,12 @@ impl UI {
     execute!(
       io::stdout(),
       MoveTo(self.field_size.0 + 5, 1),
-      SetColors(Colors::new(Cyan, Black)),
-      SetAttribute(Attribute::Bold),
-      Print("Очки: "),
-      SetColors(Colors::new(Magenta, Black)),
-      SetAttribute(Attribute::NormalIntensity),
-      Print(format!("{}", score)),
+      Print("Очки: ".with(Cyan)),
+      Print(format!("{}", score).with(Magenta).bold()),
 
       MoveTo(self.field_size.0 + 5, 2),
-      SetColors(Colors::new(Cyan, Black)),
-      SetAttribute(Attribute::Bold),
-      Print("Длина змеи: "),
-      SetColors(Colors::new(Magenta, Black)),
-      SetAttribute(Attribute::NormalIntensity),
-      Print(format!("{}", s_length))
+      Print("Длина змеи: ".with(Cyan)),
+      Print(format!("{}", s_length).with(Magenta).bold())
     )
   }
 
@@ -207,12 +196,12 @@ impl UI {
     execute!(
       io::stdout(),
       MoveTo(self.field_size.0 + 5, 3),
-      SetColors(Colors::new(Cyan, Black)),
-      SetAttribute(Attribute::Bold),
-      Print("Время: "),
-      SetColors(Colors::new(Magenta, Black)),
-      SetAttribute(Attribute::NormalIntensity),
-      Print(format!("{}м{:.1}с ", minutes as u64, seconds))
+      Print("Время: ".with(Cyan)),
+      Print(format!(
+        "{}м{:.1}с ",
+        minutes as u64,
+        seconds
+      ).with(Magenta).bold())
     )
   }
 
@@ -223,28 +212,27 @@ impl UI {
     origin.1 /= 2;
     origin.0 -= char_count as u16 / 2;
     origin.1 -= 1;
-    
-    execute!(
-      io::stdout(),
-      SetAttribute(Attribute::Bold),
-      SetColors(Colors::new(DarkRed, Black)),
-      cursor::Show
-    )?;
 
     execute!(
       io::stdout(),
-      SetAttribute(Attribute::Bold),
-      SetColors(Colors::new(DarkRed, Black)),
       MoveTo(origin.0, origin.1),
-      Print(format!("╔{:═<1$}╗", "", char_count + 2)),
+      Print(format!(
+        "╔{:═<1$}╗", "",
+        char_count + 2
+      ).with(DarkRed).bold()),
       MoveTo(origin.0, origin.1 + 1),
-      Print(format!("║{: <1$}║", "", char_count + 2)),
+      Print(format!(
+        "║{: <1$}║", "",
+        char_count + 2
+      ).with(DarkRed).bold()),
       MoveTo(origin.0, origin.1 + 2),
-      Print(format!("╚{:═<1$}╝", "", char_count + 2)),
+      Print(format!(
+        "╚{:═<1$}╝", "",
+        char_count + 2
+      ).with(DarkRed).bold()),
 
       MoveTo(origin.0 + 2, origin.1 + 1),
-      Print(message),
-      SetAttribute(Attribute::NormalIntensity),
+      Print(message.with(DarkRed).bold()),
       MoveTo(0, 0)
     )?;
 
@@ -258,8 +246,7 @@ impl UI {
     execute!(
       io::stdout(),
       MoveTo(pos.0, pos.1),
-      SetColors(Colors::new(food.get_color(), Black)),
-      Print(food.get_symbol()),
+      Print(food.get_symbol().with(food.get_color())),
     )
   }
 
