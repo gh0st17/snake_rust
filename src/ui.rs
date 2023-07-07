@@ -25,7 +25,7 @@ const MINIMUM_HEIGHT: u16 = 13;
 pub type Pos = (u16, u16);
 
 pub struct UI {
-  pub field_size: (u16, u16)
+  pub field_size: Pos
 }
 
 impl UI {
@@ -119,7 +119,7 @@ impl UI {
 
   pub fn print_snake(&self, snake: &Snake) -> Result<()> {
     let mut symbol: char;
-    let mut pos: (u16, u16);
+    let mut pos: Pos;
 
     execute!(
       io::stdout(),
@@ -261,7 +261,7 @@ impl UI {
     )
   }
 
-  pub fn clear_char(&self, pos: (u16, u16)) -> Result<()> {
+  pub fn clear_char(&self, pos: Pos) -> Result<()> {
     execute!(
       io::stdout(),
       MoveTo(pos.0, pos.1),

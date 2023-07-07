@@ -5,7 +5,7 @@ use crate::ui::Pos;
 
 pub struct Food {
   symbol: char,
-  pos: (u16, u16),
+  pos: Pos,
   value: u16,
   color: Color
 }

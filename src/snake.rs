@@ -26,7 +26,7 @@ impl SnakePart {
     self.symbol
   }
 
-  pub fn update(&mut self, dir: Direction, max_size: (u16, u16)) {
+  pub fn update(&mut self, dir: Direction, max_size: Pos) {
     match dir {
       Direction::UP    => self.pos.1 -= 1,
       Direction::DOWN  => self.pos.1 += 1,
