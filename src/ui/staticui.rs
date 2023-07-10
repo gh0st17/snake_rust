@@ -33,7 +33,7 @@ impl StaticUI {
         field_size.0 as usize
       ).with(Cyan).bold()),
       cursor::SavePosition,
-      MoveTo(1 + (field_size.0 - len_str as u16 / 2) / 2, 0),
+      MoveTo((field_size.0 - len_str as u16 / 2) / 2, 0),
       Print(size_str.with(Magenta)),
       cursor::RestorePosition,
       Print(format!(" Статистика ").with(Magenta)),
