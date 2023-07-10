@@ -47,13 +47,6 @@ impl UI {
       cursor::Hide
     )?;
 
-    for _ in 0..height {
-      execute!(
-        io::stdout(),
-        Print(format!("{: <1$}", "", width as usize).with(Cyan))
-      )?;
-    }
-
     width  = 23 + (width  - MINIMUM_WIDTH);
     height = 12 + (height - MINIMUM_HEIGHT);
     Ok(UI { field_size: (width, height) })
@@ -253,8 +246,7 @@ impl UI {
       ).with(DarkRed).bold()),
 
       MoveTo(origin.0 + 2, origin.1 + 1),
-      Print(message.with(DarkRed).bold()),
-      MoveTo(0, 0)
+      Print(message.with(DarkRed).bold())
     )?;
 
     sleep(Duration::from_secs(3));

@@ -284,7 +284,7 @@ impl Game {
           break;
         }
         else {
-          sleep(Duration::from_millis(300));
+          sleep(Duration::from_millis(200));
         }
       }
 
