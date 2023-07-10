@@ -39,7 +39,6 @@ fn main() {
     game.time(),
     game.fetch_key(),
     game.snake_update(),
-    game.food_generator(),
     game.terminal_size_checker()
   ];
 
