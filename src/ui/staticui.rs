@@ -2,7 +2,7 @@ use std::io::{self, Result};
 
 use crossterm::{
   terminal,
-  cursor::MoveTo,
+  cursor::{MoveTo, self},
   style::{
     Print,
     Color::*,
@@ -18,6 +18,13 @@ impl StaticUI {
     let terminal_size = terminal::size().unwrap();
     let substract = terminal_size.0 - field_size.0;
     let half = (substract as usize - 17) / 2;
+    let size_str = format!(
+      " {}x{} ",
+      field_size.0,
+      field_size.1
+    );
+    let len_str = size_str.chars().count()
+;
     execute!(
       io::stdout(),
       MoveTo(1, 0),
@@ -25,6 +32,10 @@ impl StaticUI {
         "╔{:═<1$}╗ ╔════", "",
         field_size.0 as usize
       ).with(Cyan).bold()),
+      cursor::SavePosition,
+      MoveTo(1 + (field_size.0 - len_str as u16 / 2) / 2, 0),
+      Print(size_str.with(Magenta)),
+      cursor::RestorePosition,
       Print(format!(" Статистика ").with(Magenta)),
       Print(format!("════╗").with(Cyan).bold()),
       MoveTo(field_size.0 + 4, 4),
