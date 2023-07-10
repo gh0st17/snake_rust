@@ -8,8 +8,7 @@ use crate::{snake::Snake, food::Food};
 
 use std::{
   process::exit,
-  io::{self, Result},
-  time::Duration
+  io::{self, Result}
 };
 
 use crossterm::{
