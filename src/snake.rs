@@ -33,6 +33,11 @@ impl SnakePart {
     self.color
   }
 
+  pub fn color(mut self, color: Color) -> SnakePart {
+    self.color = color;
+    self
+  }
+
   pub fn set_color(&mut self, color: Color) {
     self.color = color;
   }
@@ -69,7 +74,7 @@ pub struct Snake {
 impl Snake {
   pub fn new() -> Snake {
     Snake {
-      parts: vec![SnakePart::new('O', (3, 1))],
+      parts: vec![SnakePart::new('◇', (3, 1)).color(Green)],
       dir: Direction::RIGHT
     }
   }
@@ -115,7 +120,7 @@ impl Snake {
   }
 
   pub fn add_part(&mut self, pos: Pos) {
-    self.parts.push(SnakePart::new('o', pos));
+    self.parts.push(SnakePart::new('◆', pos));
   }
 
   pub fn check_self_eaten(&self) -> bool {
@@ -150,5 +155,4 @@ impl Snake {
     let head = &mut self.parts[0];
     head.set_color(color);
   }
-
 }

@@ -19,17 +19,10 @@ fn main() {
     }
   };
 
-  match ui.print_frame() {
+  match ui.print_frame_help() {
     Ok(_) => (),
     Err(err) => {
-      panic!("Ошибка при отрисовке рамки: {}", err)
-    }
-  };
-  
-  match ui.print_help() {
-    Ok(_) => (),
-    Err(err) => {
-      panic!("Ошибка при печати инструкции: {}", err)
+      panic!("Ошибка при отрисовке интерфейа: {}", err)
     }
   };
 

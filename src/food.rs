@@ -82,7 +82,7 @@ impl Food {
     }
     else {
       food = Food::new(pos)
-        .symbol('▃')
+        .symbol('▬')
         .value(0)
         .color(Color::Red);
     }

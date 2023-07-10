@@ -5,7 +5,7 @@ use crate::ui::UI;
 use std::{
   io::Result,
   thread::{sleep, self, JoinHandle},
-  time::{Duration, Instant},
+  time::Duration,
   sync::{
     Arc, Mutex,
     atomic::{AtomicBool, Ordering}
@@ -53,14 +53,12 @@ impl Game {
     let ui = self.ui.clone();
 
     let handle = thread::spawn(move || -> Result<()> { 
-      let mut t2: Instant;
-      let t1 = Instant::now();
+      let (mut time, delay) = (0.0f64, 0.1f64);
   
       loop {
-        t2 = Instant::now();
-
         if !pause.load(Ordering::Acquire) {
-          ui.lock().unwrap().print_time(&(t2 - t1).as_secs_f64())?;
+          ui.lock().unwrap().print_time(&time)?;
+          time += delay;
         }
 
         if stop_bool.load(Ordering::Acquire) {
@@ -202,7 +200,7 @@ impl Game {
               _snake.set_head_color(Cyan);
             }
             else {
-              _snake.set_head_color(DarkGreen);
+              _snake.set_head_color(Green);
             }
           }
         }
@@ -213,11 +211,10 @@ impl Game {
           let _ui = ui.lock().unwrap();
 
           if !_pause {
-            _ui.set_alternate(true)?;
             _ui.print_end_game_message("Пауза")?;
           }
           else {
-            _ui.set_alternate(false)?;
+            _ui.print_frame_help()?;
           }
         }
 
@@ -300,5 +297,11 @@ impl Game {
 
   pub fn is_over(&self) -> bool {
     self.is_over.load(Ordering::Acquire)
+  }
+}
+
+impl Drop for Game {
+  fn drop(&mut self) {
+    sleep(Duration::from_secs(3));
   }
 }
