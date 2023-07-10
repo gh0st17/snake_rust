@@ -8,7 +8,9 @@ use crate::{snake::Snake, food::Food};
 
 use std::{
   process::exit,
-  io::{self, Result}
+  io::{self, Result},
+  thread::sleep,
+  time::Duration
 };
 
 use crossterm::{
@@ -63,8 +65,13 @@ impl UI {
     self.print_help()
   }
 
-  pub fn print_end_game_message(&self, message: &str) -> Result<()> {
-    StaticUI::print_end_game_message(message)
+  pub fn print_end_game_message(&self, message: &str, is_delayed: bool) -> Result<()> {
+    StaticUI::print_end_game_message(message)?;
+    if is_delayed {
+      sleep(Duration::from_secs(3));
+    }
+
+    Ok(())
   }
 
   pub fn print_stats(&self, score: &u16, s_length: &u16) -> Result<()> {

@@ -1,6 +1,6 @@
 use crate::snake::{Snake, Direction};
 use crate::food::Food;
-use crate::ui::UI;
+use crate::ui::{UI, Pos};
 
 use std::{
   io::Result,
@@ -124,7 +124,7 @@ impl Game {
 
         if snake.lock().unwrap().check_self_eaten() {
           ui.lock().unwrap()
-            .print_end_game_message("Сам себя съел!")?;
+            .print_end_game_message("Сам себя съел!", true)?;
 
           stop_bool.store(true, Ordering::Release);
           break;
@@ -136,7 +136,7 @@ impl Game {
 
         if snake.lock().unwrap().check_pos(brick.get_pos()) {
           ui.lock().unwrap()
-            .print_end_game_message("Съел кирпич!")?;
+            .print_end_game_message("Съел кирпич!", true)?;
 
           stop_bool.store(true, Ordering::Release);
           break;
@@ -211,7 +211,7 @@ impl Game {
           let _ui = ui.lock().unwrap();
 
           if !_pause {
-            _ui.print_end_game_message("Пауза")?;
+            _ui.print_end_game_message("Пауза", false)?;
           }
           else {
             _ui.print_frame_help()?;
@@ -220,7 +220,7 @@ impl Game {
 
         if event == Event::Key(KeyCode::Esc.into()) {
           ui.lock().unwrap()
-            .print_end_game_message("Прерывание...")?;
+            .print_end_game_message("Прерывание...", true)?;
 
           stop_bool.store(true, Ordering::Release);
           break;
@@ -233,7 +233,7 @@ impl Game {
     Ok(handle)
   }
 
-  fn food_generator(&mut self, food: &mut Food, brick: &mut Food, snake_pos: &mut (u16, u16)) -> Result<()> {
+  fn food_generator(&mut self, food: &mut Food, brick: &mut Food, snake_pos: &mut Pos) -> Result<()> {
     self.score += food.get_value();
 
     self.ui.lock().unwrap().print_stats(
@@ -297,11 +297,5 @@ impl Game {
 
   pub fn is_over(&self) -> bool {
     self.is_over.load(Ordering::Acquire)
-  }
-}
-
-impl Drop for Game {
-  fn drop(&mut self) {
-    sleep(Duration::from_secs(3));
   }
 }
