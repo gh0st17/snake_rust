@@ -2,14 +2,10 @@ pub mod ui;
 pub mod food;
 pub mod snake;
 pub mod game;
+pub mod error;
 
 use ui::UI;
 use game::Game;
-
-use std::{
-  thread::sleep,
-  time::Duration
-};
 
 fn main() {
   let ui = match UI::new() {
@@ -28,23 +24,5 @@ fn main() {
 
   let mut game = Game::new(ui);
 
-  let threads = vec![
-    game.time(),
-    game.fetch_key(),
-    game.snake_update(),
-    game.terminal_size_checker()
-  ];
-
-  for thread in threads {
-    match thread {
-      Ok(_) => (),
-      Err(err) => {
-        panic!("{}", err);
-      }
-    }
-  }
-
-  while !game.is_over() {
-   sleep(Duration::from_secs(1));
-  }
+  game.run();
 }

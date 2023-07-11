@@ -2,9 +2,10 @@ use crate::snake::{Snake, Direction};
 use crate::food::Food;
 use crate::ui::{UI, Pos};
 
+use std::thread::JoinHandle;
 use std::{
   io::Result,
-  thread::{sleep, self, JoinHandle},
+  thread::{sleep, self},
   time::Duration,
   sync::{
     Arc, Mutex,
@@ -47,7 +48,31 @@ impl Game {
     }
   }
 
-  pub fn time(&mut self) -> Result<JoinHandle<Result<()>>>  {
+  pub fn run(&mut self) {
+    let threads = vec![
+      self.time_update(),
+      self.snake_update(),
+      self.fetch_key(),
+      self.terminal_size_checker()
+    ];
+
+    for thread in threads {
+      match thread {
+        Ok(_) => (),
+        Err(e) => panic!("{}", e)
+      }
+    }
+
+    while !self.is_over() {
+      sleep(Duration::from_secs(1));
+    }
+  }
+
+  fn is_over(&self) -> bool {
+    self.is_over.load(Ordering::Acquire)
+  }
+
+  fn time_update(&mut self) -> Result<JoinHandle<Result<()>>>  {
     let stop_bool = self.is_over.clone();
     let pause = self.pause.clone();
     let ui = self.ui.clone();
@@ -75,7 +100,7 @@ impl Game {
     Ok(handle)
   }
 
-  pub fn snake_update(&mut self) -> Result<JoinHandle<Result<()>>>  {
+  fn snake_update(&mut self) -> Result<JoinHandle<Result<()>>> {
     let stop_bool = self.is_over.clone();
     let pause = self.pause.clone();
     let boost = self.boost.clone();
@@ -161,7 +186,7 @@ impl Game {
     Ok(handle)
   }
 
-  pub fn fetch_key(&mut self) -> Result<JoinHandle<Result<()>>>  {
+  fn fetch_key(&mut self) -> Result<JoinHandle<Result<()>>>{
     let stop_bool = self.is_over.clone();
     let pause = self.pause.clone();
     let boost: Arc<AtomicBool> = self.boost.clone();
@@ -229,7 +254,7 @@ impl Game {
 
       Ok(())
     });
-
+    
     Ok(handle)
   }
 
@@ -270,7 +295,7 @@ impl Game {
     Ok(())
   }
 
-  pub fn terminal_size_checker(&mut self) -> Result<JoinHandle<Result<()>>>  {
+  fn terminal_size_checker(&mut self) -> Result<JoinHandle<Result<()>>> {
     let stop_bool = self.is_over.clone();
     let terminal_size = self.terminal_size.clone();
 
@@ -289,13 +314,5 @@ impl Game {
     });
 
     Ok(handle)
-  } 
-
-  pub fn stop(&mut self) {
-    self.is_over.store(true, Ordering::Release);
-  }
-
-  pub fn is_over(&self) -> bool {
-    self.is_over.load(Ordering::Acquire)
   }
 }

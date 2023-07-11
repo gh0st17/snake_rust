@@ -4,10 +4,9 @@ mod staticui;
 use dynamicui::DynamicUI;
 use staticui::StaticUI;
 
-use crate::{snake::Snake, food::Food};
+use crate::{snake::Snake, food::Food, error::{*, self}};
 
 use std::{
-  process::exit,
   io::{self, Result},
   thread::sleep,
   time::Duration
@@ -29,16 +28,14 @@ pub struct UI {
 }
 
 impl UI {
-  pub fn new() -> Result<UI> {
+  pub fn new() -> error::Result<UI> {
     enable_raw_mode()
       .expect("Could not turn on Raw mode");
 
     let (mut width, mut height) = crossterm::terminal::size()?;
 
     if width < MINIMUM_WIDTH || height < MINIMUM_HEIGHT {
-      println!("Минимальный размер терминала {} столбцов {} строк",
-      MINIMUM_WIDTH, MINIMUM_HEIGHT);
-      exit(1);
+      return Err(SnakeError::Dimension(MINIMUM_WIDTH, MINIMUM_HEIGHT));
     }
     
     execute!(
