@@ -27,7 +27,6 @@ pub struct Game {
   boost: Arc<AtomicBool>,
   score: u16,
   dir: Arc<Atomic<Direction>>,
-  snake: Arc<Mutex<Snake>>,
   ui: Arc<Mutex<UI>>,
   field_size: (u16, u16),
   terminal_size: (u16, u16)
@@ -42,7 +41,6 @@ impl Game {
       score: 0,
       dir: Arc::new(Atomic::new(Direction::RIGHT)),
       field_size: ui.field_size,
-      snake: Arc::new(Mutex::new(Snake::new())),
       ui: Arc::new(Mutex::new(ui)),
       terminal_size: terminal::size().unwrap()
     }
@@ -105,11 +103,11 @@ impl Game {
     let pause = self.pause.clone();
     let boost = self.boost.clone();
     let dir = self.dir.clone();
-    let snake = self.snake.clone();
+    let mut snake = Snake::new();
     let ui = self.ui.clone();
     let field_size = self.field_size;
     
-    let s_length = snake.lock().unwrap().get_parts().len() as u16 - 1;
+    let s_length = snake.get_parts().len() as u16 - 1;
 
     let result = self.ui
       .lock()
@@ -126,14 +124,15 @@ impl Game {
     let mut shared_self = self.clone();
 
     let handle = thread::spawn(move || -> Result<()> {
-      let mut snake_pos = snake.lock().unwrap().get_pos();
+      let mut snake_pos = snake.get_pos();
+      let mut _boost = boost.load(Ordering::Acquire);
       let mut food = Food::generate_food(&field_size, true, snake_pos);
       let mut brick = Food::generate_food(&field_size, false, snake_pos);
       let local_self = &mut shared_self;
 
       ui.lock().unwrap().print_food(&food)?;
       ui.lock().unwrap().print_food(&brick)?;
-      ui.lock().unwrap().print_snake(&snake.lock().unwrap())?;
+      ui.lock().unwrap().print_snake(&snake)?;
 
       loop {
         if pause.load(Ordering::Acquire) {
@@ -141,13 +140,13 @@ impl Game {
           continue;
         }
 
-        snake.lock().unwrap().set_direction(dir.load(Ordering::Acquire));
-        let last_pos = snake.lock().unwrap().update(field_size);
+        snake.set_direction(dir.load(Ordering::Acquire));
+        let last_pos = snake.update(field_size);
 
         ui.lock().unwrap().clear_char(last_pos)?;
-        ui.lock().unwrap().print_snake(&snake.lock().unwrap())?;
+        ui.lock().unwrap().print_snake(&snake)?;
 
-        if snake.lock().unwrap().check_self_eaten() {
+        if snake.check_self_eaten() {
           ui.lock().unwrap()
             .print_end_game_message("Сам себя съел!", true)?;
 
@@ -155,11 +154,14 @@ impl Game {
           break;
         }
 
-        if snake.lock().unwrap().check_pos(food.get_pos()) {
-          local_self.food_generator(&mut food, &mut brick, &mut snake_pos)?;
+        if snake.check_pos(food.get_pos()) {
+          local_self.food_generator(
+            &mut food, &mut brick,
+            &mut snake_pos, &mut snake
+          )?;
         }
 
-        if snake.lock().unwrap().check_pos(brick.get_pos()) {
+        if snake.check_pos(brick.get_pos()) {
           ui.lock().unwrap()
             .print_end_game_message("Съел кирпич!", true)?;
 
@@ -172,10 +174,20 @@ impl Game {
         }
         else {
           if boost.load(Ordering::Acquire) {
-            sleep(Duration::from_millis(125))
+            sleep(Duration::from_millis(130));
+
+            if !_boost {
+              _boost = true;
+              snake.set_head_color(Cyan);
+            }
           }
           else {
-            sleep(Duration::from_millis(225));
+            sleep(Duration::from_millis(200));
+
+            if _boost {
+              _boost = false;
+              snake.set_head_color(Green);
+            }
           }
         }
       }
@@ -190,13 +202,12 @@ impl Game {
     let stop_bool = self.is_over.clone();
     let pause = self.pause.clone();
     let boost: Arc<AtomicBool> = self.boost.clone();
-    let snake = self.snake.clone();
     let ui = self.ui.clone();
     let dir = self.dir.clone();
 
     let handle = thread::spawn(move || -> Result<()> {
       loop {
-        let event = read().unwrap();
+        let event = read()?;
 
         if !pause.load(Ordering::Acquire) {
           if event == Event::Key(KeyCode::Char('w').into()) || 
@@ -219,14 +230,6 @@ impl Game {
           if event == Event::Key(KeyCode::Char('b').into()) {
             let _boost = boost.load(Ordering::Acquire);
             boost.store(!_boost, Ordering::Release);
-            let mut _snake = snake.lock().unwrap();
-
-            if !_boost {
-              _snake.set_head_color(Cyan);
-            }
-            else {
-              _snake.set_head_color(Green);
-            }
           }
         }
 
@@ -258,22 +261,24 @@ impl Game {
     Ok(handle)
   }
 
-  fn food_generator(&mut self, food: &mut Food, brick: &mut Food, snake_pos: &mut Pos) -> Result<()> {
+  fn food_generator(&mut self, food: &mut Food, brick: &mut Food,
+      snake_pos: &mut Pos, snake: &mut Snake) -> Result<()> {
+    
     self.score += food.get_value();
 
     self.ui.lock().unwrap().print_stats(
       &self.score,
-      &(self.snake.lock().unwrap().get_parts().len() as u16)
+      &(snake.get_parts().len() as u16)
     )?;
 
     let pos = food.get_pos();
-    self.snake.lock().unwrap().add_part(pos);
+    snake.add_part(pos);
     
-    *snake_pos = self.snake.lock().unwrap().get_pos();
+    *snake_pos = snake.get_pos();
     loop {
       *food = Food::generate_food(&self.field_size, true, *snake_pos);
 
-      if !self.snake.lock().unwrap().check_pos(food.get_pos()) {
+      if !snake.check_pos(food.get_pos()) {
         break;
       }
     }
@@ -284,7 +289,7 @@ impl Game {
     loop {
       *brick = Food::generate_food(&self.field_size, false, *snake_pos);
 
-      if !self.snake.lock().unwrap().check_pos(brick.get_pos()) &&
+      if !snake.check_pos(brick.get_pos()) &&
           food.get_pos() != brick.get_pos() {
         break;
       }
