@@ -209,7 +209,7 @@ impl Game {
   fn fetch_key(&mut self) -> Result<JoinHandle<Result<()>>>{
     let stop_bool = self.is_over.clone();
     let pause = self.pause.clone();
-    let boost: Arc<AtomicBool> = self.boost.clone();
+    let boost = self.boost.clone();
     let ui = self.ui.clone();
     let dir = self.dir.clone();
 
