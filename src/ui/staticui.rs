@@ -11,10 +11,27 @@ use crossterm::{
   execute
 };
 
-pub struct StaticUI;
+use crate::ui::ui_items::Label;
+
+pub struct StaticUI {
+  field_size: (u16, u16),
+  static_labels: Vec<Label>
+}
 
 impl StaticUI {
-  pub fn print_frame(field_size: &(u16, u16)) -> Result<()> {
+  pub fn new(field_size: (u16, u16)) -> Self {
+    Self {
+      field_size,
+      static_labels: vec![
+        Label::new((field_size.0 + 5, 1), "Очки:".to_string().with(Cyan)),
+        Label::new((field_size.0 + 5, 2), "Длина змеи:".to_string().with(Cyan)),
+        Label::new((field_size.0 + 5, 3), "Время:".to_string().with(Cyan))
+      ],
+    }
+  }
+
+  fn print_frame(&self) -> Result<()> {
+    let field_size = &self.field_size;
     let terminal_size = terminal::size().unwrap();
     let substract = terminal_size.0 - field_size.0;
     let half = (substract as usize - 17) / 2;
@@ -92,7 +109,8 @@ impl StaticUI {
     )
   }
 
-  pub fn print_help(field_size: &(u16, u16)) -> Result<()> {
+  pub fn print_help(&self) -> Result<()> {
+    let field_size = &self.field_size;
     execute!(
       io::stdout(),
       MoveTo(field_size.0 + 5, 6),
@@ -127,37 +145,17 @@ impl StaticUI {
       Print(" .".with(Cyan)),
     )
   }
+}
 
-  pub fn print_end_game_message(message: &str) -> Result<()> {
-    let mut origin = terminal::size()?;
-    let char_count = message.chars().count();
-    origin.0 /= 2;
-    origin.1 /= 2;
-    origin.0 -= (char_count as u16 / 2) + 2;
-    origin.1 -= 2;
+use crate::ui::Drawable;
 
-    execute!(
-      io::stdout(),
-      MoveTo(origin.0, origin.1),
-      Print(format!(
-        "╔{:═<1$}╗", "",
-        char_count + 2
-      ).with(DarkRed).bold()),
-      MoveTo(origin.0, origin.1 + 1),
-      Print(format!(
-        "║{: <1$}║", "",
-        char_count + 2
-      ).with(DarkRed).bold()),
-      MoveTo(origin.0, origin.1 + 2),
-      Print(format!(
-        "╚{:═<1$}╝", "",
-        char_count + 2
-      ).with(DarkRed).bold()),
+impl Drawable for StaticUI {
+  fn draw(&self) -> Result<()>{
+    for label in &self.static_labels {
+      label.draw()?;
+    }
 
-      MoveTo(origin.0 + 2, origin.1 + 1),
-      Print(message.with(DarkRed).bold())
-    )?;
-
-    Ok(())
+    Self::print_frame(&self)?;
+    Self::print_help(&self)
   }
 }

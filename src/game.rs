@@ -1,6 +1,6 @@
 use crate::snake::{Snake, Direction};
 use crate::food::Food;
-use crate::ui::{UI, Pos};
+use crate::ui::{UI, Pos, ui_items::Symbol};
 
 use std::thread::JoinHandle;
 use std::{
@@ -70,7 +70,7 @@ impl Game {
     self.is_over.load(Ordering::Acquire)
   }
 
-  fn time_update(&mut self) -> Result<JoinHandle<Result<()>>>  {
+  fn time_update(&mut self) -> Result<JoinHandle<Result<()>>> {
     let stop_bool = self.is_over.clone();
     let pause = self.pause.clone();
     let ui = self.ui.clone();
@@ -126,13 +126,13 @@ impl Game {
     let handle = thread::spawn(move || -> Result<()> {
       let mut snake_pos = snake.get_pos();
       let mut _boost = boost.load(Ordering::Acquire);
-      let mut food = Food::generate_food(&field_size, true, snake_pos);
-      let mut brick = Food::generate_food(&field_size, false, snake_pos);
+      let mut food = Food::generate_food(&field_size, true, (0,0));
+      let mut brick = Food::generate_food(&field_size, false, (0,0));
       let local_self = &mut shared_self;
 
-      ui.lock().unwrap().print_food(&food)?;
-      ui.lock().unwrap().print_food(&brick)?;
-      ui.lock().unwrap().print_snake(&snake)?;
+      ui.lock().unwrap().draw(&food)?;
+      ui.lock().unwrap().draw(&brick)?;
+      ui.lock().unwrap().draw(&snake)?;
 
       loop {
         if pause.load(Ordering::Acquire) {
@@ -143,27 +143,27 @@ impl Game {
         snake.set_direction(dir.load(Ordering::Acquire));
         let last_pos = snake.update(field_size);
 
-        ui.lock().unwrap().clear_char(last_pos)?;
-        ui.lock().unwrap().print_snake(&snake)?;
+        ui.lock().unwrap().draw(&Symbol::new(last_pos))?;
+        ui.lock().unwrap().draw(&snake)?;
 
         if snake.check_self_eaten() {
           ui.lock().unwrap()
-            .print_end_game_message("Сам себя съел!", true)?;
+            .print_popup_message("Сам себя съел!".to_string(), true)?;
 
           stop_bool.store(true, Ordering::Release);
           break;
         }
 
-        if snake.check_pos(food.get_pos()) {
+        if snake.check_pos(&food.get_pos()) {
           local_self.food_generator(
             &mut food, &mut brick,
             &mut snake_pos, &mut snake
           )?;
         }
 
-        if snake.check_pos(brick.get_pos()) {
+        if snake.check_pos(&brick.get_pos()) {
           ui.lock().unwrap()
-            .print_end_game_message("Съел кирпич!", true)?;
+            .print_popup_message("Съел кирпич!".to_string(), true)?;
 
           stop_bool.store(true, Ordering::Release);
           break;
@@ -239,16 +239,16 @@ impl Game {
           let _ui = ui.lock().unwrap();
 
           if !_pause {
-            _ui.print_end_game_message("Пауза", false)?;
+            _ui.print_popup_message("Пауза".to_string(), false)?;
           }
           else {
-            _ui.print_frame_help()?;
+            _ui.print_static()?;
           }
         }
 
         if event == Event::Key(KeyCode::Esc.into()) {
           ui.lock().unwrap()
-            .print_end_game_message("Прерывание...", true)?;
+            .print_popup_message("Прерывание...".to_string(), true)?;
 
           stop_bool.store(true, Ordering::Release);
           break;
@@ -278,24 +278,24 @@ impl Game {
     loop {
       *food = Food::generate_food(&self.field_size, true, *snake_pos);
 
-      if !snake.check_pos(food.get_pos()) {
+      if !snake.check_pos(&food.get_pos()) {
         break;
       }
     }
 
-    self.ui.lock().unwrap().print_food(&food)?;
-    self.ui.lock().unwrap().clear_char(brick.get_pos())?;
+    self.ui.lock().unwrap().draw(food)?;
+    self.ui.lock().unwrap().draw(&Symbol::new(brick.get_pos()))?;
 
     loop {
       *brick = Food::generate_food(&self.field_size, false, *snake_pos);
 
-      if !snake.check_pos(brick.get_pos()) &&
+      if !snake.check_pos(&brick.get_pos()) &&
           food.get_pos() != brick.get_pos() {
         break;
       }
     }
 
-    self.ui.lock().unwrap().print_food(&brick)?;
+    self.ui.lock().unwrap().draw(brick)?;
 
     Ok(())
   }

@@ -1,68 +1,59 @@
 use crossterm::style::Color::{self, *};
 
-use crate::ui::Pos;
+use crate::ui::{Pos, Drawable, ui_items::Symbol};
 
 #[derive(Copy, Clone)]
 pub enum Direction { UP, DOWN, LEFT, RIGHT }
 
 #[derive(Copy, Clone)]
 pub struct SnakePart {
-  symbol: char,
-  pos: Pos,
-  color: Color
+  symbol: Symbol
 }
 
 impl SnakePart {
-  pub fn new(symbol: char, pos: Pos) -> SnakePart {
-    SnakePart { symbol, pos, color: DarkGreen }
+  pub fn new(symbol: Symbol) -> SnakePart {
+    SnakePart { symbol }
   }
 
   pub fn get_pos(&self) -> Pos {
-    self.pos
+    self.symbol.pos
   }
 
   pub fn set_pos(&mut self, new_pos: Pos) {
-    self.pos = new_pos;
-  }
-
-  pub fn get_symbol(&self) -> char {
-    self.symbol
-  }
-
-  pub fn get_color(&self) -> Color {
-    self.color
-  }
-
-  pub fn color(mut self, color: Color) -> SnakePart {
-    self.color = color;
-    self
+    self.symbol.pos = new_pos;
   }
 
   pub fn set_color(&mut self, color: Color) {
-    self.color = color;
+    self.symbol.color = color;
   }
 
   pub fn update(&mut self, dir: Direction, max_size: Pos) {
     match dir {
-      Direction::UP    => self.pos.1 -= 1,
-      Direction::DOWN  => self.pos.1 += 1,
-      Direction::LEFT  => self.pos.0 -= 1,
-      Direction::RIGHT => self.pos.0 += 1
+      Direction::UP    => self.symbol.pos.1 -= 1,
+      Direction::DOWN  => self.symbol.pos.1 += 1,
+      Direction::LEFT  => self.symbol.pos.0 -= 1,
+      Direction::RIGHT => self.symbol.pos.0 += 1
     }
 
-    if self.pos.0 == 1 {
-      self.pos.0 =  max_size.0 + 1;
+    if self.symbol.pos.0 == 1 {
+      self.symbol.pos.0 =  max_size.0 + 1;
     }
-    else if self.pos.0 == max_size.0 + 2 {
-      self.pos.0 = 2;
+    else if self.symbol.pos.0 == max_size.0 + 2 {
+      self.symbol.pos.0 = 2;
     }
 
-    if self.pos.1 == 0 {
-      self.pos.1 = max_size.1;
+    if self.symbol.pos.1 == 0 {
+      self.symbol.pos.1 = max_size.1;
     }
-    else if self.pos.1 == max_size.1 + 1 {
-      self.pos.1 = 1;
+    else if self.symbol.pos.1 == max_size.1 + 1 {
+      self.symbol.pos.1 = 1;
     }
+  }
+}
+
+impl Drawable for SnakePart {
+  fn draw(&self) -> std::io::Result<()> {
+    self.symbol.draw()
   }
 }
 
@@ -74,7 +65,13 @@ pub struct Snake {
 impl Snake {
   pub fn new() -> Snake {
     Snake {
-      parts: vec![SnakePart::new('◇', (3, 1)).color(Green)],
+      parts: vec![
+        SnakePart::new(
+          Symbol::new((3, 1))
+            .ch('◇')
+            .color(Green)
+          )
+        ],
       dir: Direction::RIGHT
     }
   }
@@ -120,7 +117,13 @@ impl Snake {
   }
 
   pub fn add_part(&mut self, pos: Pos) {
-    self.parts.push(SnakePart::new('◆', pos));
+    self.parts.push(
+      SnakePart::new(
+        Symbol::new(pos)
+          .ch('◆')
+          .color(DarkGreen)
+        )
+      );
   }
 
   pub fn check_self_eaten(&self) -> bool {
@@ -137,9 +140,9 @@ impl Snake {
     false
   }
 
-  pub fn check_pos(&self, pos: Pos) -> bool {
+  pub fn check_pos(&self, pos: &Pos) -> bool {
     for part in &self.parts {
-      if pos == part.get_pos() {
+      if *pos == part.get_pos() {
         return true;
       }
     }
@@ -154,5 +157,15 @@ impl Snake {
   pub fn set_head_color(&mut self, color: Color) {
     let head = &mut self.parts[0];
     head.set_color(color);
+  }
+}
+
+impl Drawable for Snake {
+  fn draw(&self) -> std::io::Result<()> {
+    for part in self.parts.iter().rev() {
+      part.draw()?;
+    }
+
+    Ok(())
   }
 }

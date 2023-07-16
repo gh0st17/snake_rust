@@ -1,59 +1,35 @@
 use rand::Rng;
 use crossterm::style::Color;
 
-use crate::ui::Pos;
+use crate::ui::{Pos, Drawable};
+use crate::ui::ui_items::Symbol;
 
 pub struct Food {
-  symbol: char,
-  pos: Pos,
+  pub symbol: Symbol,
   value: u16,
-  color: Color
 }
 
 impl Food {
-  pub fn new(pos: Pos) -> Food {
-    Food{
-      symbol: ' ',
-      pos,
-      value: 0,
-      color: Color::White 
-    }
+  pub fn new(symbol: Symbol) -> Self {
+    Self { symbol, value: 0 }
   }
 
-  pub fn symbol(mut self, symbol: char) -> Food {
-    self.symbol = symbol;
-    self
-  }
-
-  pub fn value(mut self, value: u16) -> Food {
+  pub fn value(mut self, value: u16) -> Self {
     self.value = value;
     self
-  }
-
-  pub fn color(mut self, color: Color) -> Food {
-    self.color = color;
-    self
-  }
-
-  pub fn get_symbol(&self) -> char {
-    self.symbol
-  }
-
-  pub fn get_pos(&self) -> Pos {
-    self.pos
   }
 
   pub fn get_value(&self) -> u16 {
     self.value
   }
 
-  pub fn get_color(&self) -> Color {
-    self.color
+  pub fn get_pos(&self) -> Pos {
+    self.symbol.pos
   }
 
-  pub fn generate_food(field_size: &Pos, kind: bool, snake_pos: Pos) -> Food {
+  pub fn generate_food(field_size: &Pos, kind: bool, snake_pos: Pos) -> Self {
     let mut rng = rand::thread_rng();
-    let food: Food;
+    let food: Self;
     let mut pos = (0, 0);
 
     loop {
@@ -68,25 +44,40 @@ impl Food {
     if kind {
       let apple = rng.gen_range(0..=1u16);
       if apple == 0 {
-        food = Food::new(pos)
-          .symbol('◉')
-          .value(10)
-          .color(Color::Green);
+        food = Food::new(
+          Symbol::new(pos)
+            .ch('◉')
+            .color(Color::Green)
+          ).value(10);
       }
       else {
-        food = Food::new(pos)
-          .symbol('◉')
-          .value(20)
-          .color(Color::Yellow);
+        food = Food::new(
+          Symbol::new(pos)
+            .ch('◉')
+            .color(Color::Yellow)
+          ).value(20);
       }
     }
     else {
-      food = Food::new(pos)
-        .symbol('▬')
-        .value(0)
-        .color(Color::Red);
+      food = Food::new(
+        Symbol::new(pos)
+          .ch('▬')
+          .color(Color::Red)
+        );
     }
 
     food
+  }
+}
+
+impl Drawable for Food {
+  fn draw(&self) -> std::io::Result<()> {
+    self.symbol.draw()
+  }
+}
+
+impl Drawable for &mut Food {
+  fn draw(&self) -> std::io::Result<()> {
+    self.symbol.draw()
   }
 }

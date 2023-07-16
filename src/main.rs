@@ -15,13 +15,6 @@ fn main() {
     }
   };
 
-  match ui.print_frame_help() {
-    Ok(_) => (),
-    Err(err) => {
-      panic!("Ошибка при отрисовке интерфейа: {}", err)
-    }
-  };
-
   let mut game = Game::new(ui);
 
   game.run();
