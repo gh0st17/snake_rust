@@ -3,80 +3,80 @@ use crossterm::style::Color;
 
 use crate::ui::{Pos, Drawable, ui_items::Symbol};
 
-pub struct Food {
-  pub symbol: Symbol,
-  value: u16,
+pub trait Food {
+  fn get_symbol(&self) -> Symbol;
+  fn get_value(&self) -> u16;
+  fn get_pos(&self) -> Pos;
 }
 
-impl Food {
-  pub fn new(symbol: Symbol) -> Self {
-    Self { symbol, value: 0 }
+impl Drawable for Box<dyn Food> {
+  fn draw(&self) -> std::io::Result<()> {
+    self.get_symbol().draw()
+  }
+}
+
+struct GreenApple(Pos);
+impl Food for GreenApple {
+  fn get_symbol(&self) -> Symbol {
+    Symbol::new(self.0)
+      .ch('◉')
+      .color(Color::Green)
   }
 
-  pub fn value(mut self, value: u16) -> Self {
-    self.value = value;
-    self
+  fn get_value(&self) -> u16 { 10 }
+
+  fn get_pos(&self) -> Pos { self.0 }
+}
+
+struct GoldApple(Pos);
+impl Food for GoldApple {
+  fn get_symbol(&self) -> Symbol {
+    Symbol::new(self.0)
+      .ch('◉')
+      .color(Color::Yellow)
   }
 
-  pub fn get_value(&self) -> u16 {
-    self.value
+  fn get_value(&self) -> u16 { 20 }
+
+  fn get_pos(&self) -> Pos { self.0 }
+}
+
+struct Brick(Pos);
+impl Food for Brick {
+  fn get_symbol(&self) -> Symbol {
+    Symbol::new(self.0)
+      .ch('▬')
+      .color(Color::Red)
   }
 
-  pub fn get_pos(&self) -> Pos {
-    self.symbol.pos
-  }
+  fn get_value(&self) -> u16 { 0 }
 
-  pub fn generate_food(field_size: &Pos, kind: bool, snake_pos: Pos) -> Self {
-    let mut rng = rand::thread_rng();
-    let food: Self;
-    let mut pos = (0, 0);
+  fn get_pos(&self) -> Pos { self.0 }
+}
 
-    loop {
-      pos.0 = rng.gen_range(3..=field_size.0);
-      pos.1 = rng.gen_range(2..=field_size.1);
+pub fn generate_food(field_size: &Pos, kind: bool, snake_pos: Pos) -> Box<dyn Food> {
+  let mut rng = rand::thread_rng();
+  let mut pos = (0, 0);
 
-      if pos.0 != snake_pos.0 && pos.1 != snake_pos.1 {
-        break;
-      }
+  loop {
+    pos.0 = rng.gen_range(3..=field_size.0);
+    pos.1 = rng.gen_range(2..=field_size.1);
+
+    if pos.0 != snake_pos.0 && pos.1 != snake_pos.1 {
+      break;
     }
-    
-    if kind {
-      let apple = rng.gen_range(0..=1u16);
-      if apple == 0 {
-        food = Self::new(
-          Symbol::new(pos)
-            .ch('◉')
-            .color(Color::Green)
-          ).value(10);
-      }
-      else {
-        food = Self::new(
-          Symbol::new(pos)
-            .ch('◉')
-            .color(Color::Yellow)
-          ).value(20);
-      }
+  }
+  
+  if kind {
+    let apple = rng.gen_range(0..=1u16);
+    if apple == 0 {
+      Box::new(GreenApple(pos))
     }
     else {
-      food = Self::new(
-        Symbol::new(pos)
-          .ch('▬')
-          .color(Color::Red)
-        );
+      Box::new(GoldApple(pos))
     }
-
-    food
   }
-}
-
-impl Drawable for Food {
-  fn draw(&self) -> std::io::Result<()> {
-    self.symbol.draw()
-  }
-}
-
-impl Drawable for &mut Food {
-  fn draw(&self) -> std::io::Result<()> {
-    self.symbol.draw()
+  else {
+    Box::new(Brick(pos))
   }
 }

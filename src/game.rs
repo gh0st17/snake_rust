@@ -1,5 +1,5 @@
 use crate::snake::{Snake, Direction};
-use crate::food::Food;
+use crate::food::{Food, generate_food};
 use crate::ui::{UI, Pos, ui_items::Symbol};
 
 use std::thread::JoinHandle;
@@ -126,8 +126,8 @@ impl Game {
     let handle = thread::spawn(move || -> Result<()> {
       let mut snake_pos = snake.get_pos();
       let mut _boost = boost.load(Ordering::Acquire);
-      let mut food = Food::generate_food(&field_size, true, (0,0));
-      let mut brick = Food::generate_food(&field_size, false, (0,0));
+      let mut food = generate_food(&field_size, true, (0,0));
+      let mut brick = generate_food(&field_size, false, (0,0));
       let local_self = &mut shared_self;
 
       ui.lock().unwrap().draw(&food)?;
@@ -261,7 +261,7 @@ impl Game {
     Ok(handle)
   }
 
-  fn food_generator(&mut self, food: &mut Food, brick: &mut Food,
+  fn food_generator(&mut self, food: &mut Box<dyn Food>, brick: &mut Box<dyn Food>,
       snake_pos: &mut Pos, snake: &mut Snake) -> Result<()> {
     
     self.score += food.get_value();
@@ -276,7 +276,7 @@ impl Game {
     
     *snake_pos = snake.get_pos();
     loop {
-      *food = Food::generate_food(&self.field_size, true, *snake_pos);
+      *food = generate_food(&self.field_size, true, *snake_pos);
 
       if !snake.check_pos(&food.get_pos()) {
         break;
@@ -287,7 +287,7 @@ impl Game {
     self.ui.lock().unwrap().draw(&Symbol::new(brick.get_pos()))?;
 
     loop {
-      *brick = Food::generate_food(&self.field_size, false, *snake_pos);
+      *brick = generate_food(&self.field_size, false, *snake_pos);
 
       if !snake.check_pos(&brick.get_pos()) &&
           food.get_pos() != brick.get_pos() {
