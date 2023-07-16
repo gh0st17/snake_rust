@@ -1,8 +1,7 @@
 use rand::Rng;
 use crossterm::style::Color;
 
-use crate::ui::{Pos, Drawable};
-use crate::ui::ui_items::Symbol;
+use crate::ui::{Pos, Drawable, ui_items::Symbol};
 
 pub struct Food {
   pub symbol: Symbol,
@@ -44,14 +43,14 @@ impl Food {
     if kind {
       let apple = rng.gen_range(0..=1u16);
       if apple == 0 {
-        food = Food::new(
+        food = Self::new(
           Symbol::new(pos)
             .ch('◉')
             .color(Color::Green)
           ).value(10);
       }
       else {
-        food = Food::new(
+        food = Self::new(
           Symbol::new(pos)
             .ch('◉')
             .color(Color::Yellow)
@@ -59,7 +58,7 @@ impl Food {
       }
     }
     else {
-      food = Food::new(
+      food = Self::new(
         Symbol::new(pos)
           .ch('▬')
           .color(Color::Red)
