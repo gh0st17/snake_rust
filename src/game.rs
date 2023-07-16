@@ -127,13 +127,19 @@ impl Game {
       let mut snake_pos = snake.get_pos();
       let mut _boost = boost.load(Ordering::Acquire);
       let mut food = generate_food(&field_size, true, (0,0));
-      let mut brick = generate_food(&field_size, false, (0,0));
+      
+      let mut bricks: Vec<Box<dyn Food>> = Vec::new();
+      for _ in 0..5 {
+        bricks.push(generate_food(&field_size, false, (0,0)));
+      }
+
       let local_self = &mut shared_self;
 
       ui.lock().unwrap().draw(&food)?;
-      ui.lock().unwrap().draw(&brick)?;
       ui.lock().unwrap().draw(&snake)?;
+      ui.lock().unwrap().draw_vec(&bricks)?;
 
+      'stop:
       loop {
         if pause.load(Ordering::Acquire) {
           sleep(Duration::from_millis(100));
@@ -156,17 +162,19 @@ impl Game {
 
         if snake.check_pos(&food.get_pos()) {
           local_self.food_generator(
-            &mut food, &mut brick,
+            &mut food, &mut bricks,
             &mut snake_pos, &mut snake
           )?;
         }
 
-        if snake.check_pos(&brick.get_pos()) {
-          ui.lock().unwrap()
-            .print_popup_message("Съел кирпич!".to_string(), true)?;
+        for brick in &bricks {
+          if snake.check_pos(&brick.get_pos()) {
+            ui.lock().unwrap()
+              .print_popup_message("Съел кирпич!".to_string(), true)?;
 
-          stop_bool.store(true, Ordering::Release);
-          break;
+            stop_bool.store(true, Ordering::Release);
+            break 'stop;
+          }
         }
 
         if stop_bool.load(Ordering::Acquire) {
@@ -261,7 +269,7 @@ impl Game {
     Ok(handle)
   }
 
-  fn food_generator(&mut self, food: &mut Box<dyn Food>, brick: &mut Box<dyn Food>,
+  fn food_generator(&mut self, food: &mut Box<dyn Food>, bricks: &mut Vec<Box<dyn Food>>,
       snake_pos: &mut Pos, snake: &mut Snake) -> Result<()> {
     
     self.score += food.get_value();
@@ -284,18 +292,30 @@ impl Game {
     }
 
     self.ui.lock().unwrap().draw(food)?;
-    self.ui.lock().unwrap().draw(&Symbol::new(brick.get_pos()))?;
 
-    loop {
-      *brick = generate_food(&self.field_size, false, *snake_pos);
+    for i in 0..bricks.len() {
+      self.ui.lock().unwrap().draw(&Symbol::new(bricks[i].get_pos()))?;
 
-      if !snake.check_pos(&brick.get_pos()) &&
-          food.get_pos() != brick.get_pos() {
+      'same:
+      loop {
+        bricks[i] = generate_food(&self.field_size, false, *snake_pos);
+
+        if snake.check_pos(&bricks[i].get_pos()) ||
+            food.get_pos() == bricks[i].get_pos() {
+          continue;
+        }
+        
+        for j in 0..bricks.len() {
+          if i != j && bricks[i].get_pos() == bricks[j].get_pos() {
+            continue 'same;
+          }
+        }
         break;
       }
+
+      self.ui.lock().unwrap().draw(&bricks[i])?;
     }
 
-    self.ui.lock().unwrap().draw(brick)?;
 
     Ok(())
   }

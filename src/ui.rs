@@ -132,6 +132,14 @@ impl UI {
   pub fn draw<D: Drawable>(&self, drawable: &D) -> Result<()>{
     drawable.draw()
   }
+
+  pub fn draw_vec<D: Drawable>(&self, drawables: &Vec<D>) -> Result<()>{
+    for drawable in drawables {
+      drawable.draw()?;
+    }
+
+    Ok(())
+  }
 }
 
 impl Drop for UI {
