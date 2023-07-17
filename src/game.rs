@@ -164,7 +164,7 @@ impl Game {
 
         if snake.check_pos(&apple.get_pos()) {
           local_self.food_generator(
-            &mut apple, &mut bricks, &mut snake
+            &mut apple, &mut bricks, &mut snake, &last_pos
           )?;
         }
 
@@ -271,7 +271,7 @@ impl Game {
   }
 
   fn food_generator(&mut self, apple: &mut Box<dyn Food>, bricks: &mut Vec<Box<dyn Food>>,
-      snake: &mut Snake) -> Result<()> {
+      snake: &mut Snake, last_pos: &Pos) -> Result<()> {
     
     self.score += apple.get_value();
 
@@ -280,8 +280,7 @@ impl Game {
       &(snake.get_parts().len() as u16)
     )?;
 
-    let pos = apple.get_pos();
-    snake.add_part(pos);
+    snake.add_part(*last_pos);
     
     let snake_pos = snake.get_head_pos();
     loop {
@@ -291,8 +290,6 @@ impl Game {
         break;
       }
     }
-
-    self.ui.lock().unwrap().draw(apple)?;
 
     for i in 0..bricks.len() {
       self.ui.lock().unwrap().draw(&Symbol::new(bricks[i].get_pos()))?;
@@ -315,6 +312,7 @@ impl Game {
       }
 
       self.ui.lock().unwrap().draw(&bricks[i])?;
+      self.ui.lock().unwrap().draw(apple)?;
     }
 
     Ok(())
