@@ -2,7 +2,7 @@ use std::io::{self, Result};
 
 use crossterm::{
   terminal,
-  cursor::{MoveTo, self},
+  cursor::MoveTo,
   style::{
     Print,
     Color::*,
@@ -11,31 +11,31 @@ use crossterm::{
   execute
 };
 
-use crate::ui::ui_items::Label;
+use crate::ui::{Pos, Size, ui_items::Label};
 use crate::food::{FoodType, get_food_with_type};
 
 pub struct StaticUI {
-  field_size: (u16, u16),
+  field_size: Size,
   static_labels: Vec<Label>
 }
 
 impl StaticUI {
-  pub fn new(field_size: (u16, u16)) -> Self {
+  pub fn new(field_size: Size) -> Self {
     Self {
       field_size,
       static_labels: vec![
         Label::new(
-          (field_size.0 + 5, 1),
+          Pos::from((field_size.width + 5, 1)),
           "Очки:".to_string()
             .with(Cyan)
         ),
         Label::new(
-          (field_size.0 + 5, 2),
+          Pos::from((field_size.width + 5, 2)),
           "Длина змеи:".to_string()
             .with(Cyan)
         ),
         Label::new(
-          (field_size.0 + 5, 3),
+          Pos::from((field_size.width + 5, 3)),
           "Время:".to_string()
             .with(Cyan)
         )
@@ -43,82 +43,65 @@ impl StaticUI {
     }
   }
 
-  fn print_frame(&self) -> Result<()> {
-    let field_size = &self.field_size;
-    let terminal_size = terminal::size().unwrap();
-    let substract = terminal_size.0 - field_size.0;
-    let half = (substract as usize - 17) / 2;
-    let size_str = format!(
-      " {}x{} ",
-      field_size.0,
-      field_size.1
+  fn print_frame(&self, pos: Pos, size: Size, title: &str) -> Result<()> {
+    let title_pos = Pos::from(
+      (
+        (size.width / 2 + 1) - 
+        (title.chars().count() as u16 / 2 + 1) +
+        pos.x, pos.y
+      )
     );
-    let len_str = size_str.chars().count()
-;
+
     execute!(
       io::stdout(),
-      MoveTo(1, 0),
+      MoveTo::from(pos),
       Print(format!(
-        "╔{:═<1$}╗ ╔════", "",
-        field_size.0 as usize
+        "╔{:═<1$}╗", "",
+          size.width as usize
       ).with(Cyan).bold()),
-      cursor::SavePosition,
-      MoveTo((field_size.0 - len_str as u16 / 2) / 2, 0),
-      Print(size_str.with(Magenta)),
-      cursor::RestorePosition,
-      Print(format!(" Статистика ").with(Magenta)),
-      Print(format!("════╗").with(Cyan).bold()),
-      MoveTo(field_size.0 + 4, 4),
-      Print(format!("╚{:═<1$}╝", "", 20).with(Cyan).bold()),
-
-      MoveTo(field_size.0 + 4, 5),
-      Print(format!("╔{:═<1$}", "", half - 1).with(Cyan).bold()),
-      Print(" Инструкция ".with(Magenta)),
-      Print(format!("{:═<1$}╗", "", half).with(Cyan).bold()),
-      MoveTo(1, field_size.1 + 1),
-      Print(format!(
-        "╚{:═<1$}╝", "",
-        field_size.0 as usize
-      ).with(Cyan).bold())
     )?;
 
-    for y in 1..=(field_size.1) { // Поле
+    for y in pos.y + 1..=pos.y + size.height {
       execute!(
         io::stdout(),
-        MoveTo(1, y),
+        MoveTo(pos.x, y),
         Print("║".with(Cyan).bold()),
-        MoveTo(field_size.0 + 2, y),
-        Print("║".with(Cyan).bold())
-      )?;
-    }
-
-    for y in 1..=3 { // Статистика
-      execute!(
-        io::stdout(),
-        MoveTo(field_size.0 + 4, y),
-        Print("║".with(Cyan).bold()),
-        MoveTo(field_size.0 + 25, y),
-        Print("║".with(Cyan).bold())
-      )?;
-    }
-
-    for y in 6..=12 { // Инструкция
-      execute!(
-        io::stdout(),
-        MoveTo(field_size.0 + 4, y),
-        Print("║".with(Cyan).bold()),
-        MoveTo(field_size.0 + substract + 7, y),
+        MoveTo(pos.x + size.width + 1, y),
         Print("║".with(Cyan).bold())
       )?;
     }
 
     execute!(
       io::stdout(),
-      MoveTo(field_size.0 + 4, 13),
+      MoveTo::from(pos.add_y(size.height + 1)),
       Print(format!(
         "╚{:═<1$}╝", "",
-        substract as usize - 6
-      ).with(Cyan).bold())
+          size.width as usize
+      ).with(Cyan).bold()),
+
+      MoveTo::from(title_pos),
+      Print(format!(" {} ", title).with(Magenta))
+    )
+  }
+
+  fn print_frames(&self) -> Result<()> {
+    self.print_frame(
+      Pos::from((1, 0)),
+      self.field_size.clone(),
+      self.field_size.to_string().as_str()
+    )?;
+
+    self.print_frame(
+      Pos::from((self.field_size.add_width(4).width, 0)),
+      Size::from((20, 3)),
+      "Статистика"
+    )?;
+
+    let terminal_size = terminal::size()?;
+    self.print_frame(
+      Pos::from((self.field_size.add_width(4).width, 5)),
+      Size::from((terminal_size.0 - self.field_size.width - 6, 7)),
+      "Инструкция"
     )
   }
 
@@ -130,22 +113,22 @@ impl StaticUI {
 
     execute!(
       io::stdout(),
-      MoveTo(field_size.0 + 5, 6),
+      MoveTo(field_size.width + 5, 6),
       Print("Клавиши для перемещения - ".with(Cyan)),
       Print("WASD".with(Magenta).bold()),
       Print(" (англ. раскладка)".with(Cyan)),
-      MoveTo(field_size.0 + 5, 7),
+      MoveTo(field_size.width + 5, 7),
       Print("или ".with(Cyan)),
       Print("стрелки".with(Magenta)),
       Print(". ".with(Cyan)),
       Print("B".with(Magenta).bold()),
       Print(" - переключает режим ускорения.".with(Cyan)),
-      MoveTo(field_size.0 + 5, 8),
+      MoveTo(field_size.width + 5, 8),
       Print("P".with(Magenta).bold()),
       Print(" - пауза. ".with(Cyan)),
       Print("ESC".with(Magenta).bold()),
       Print(" для выхода. ".with(Cyan)),
-      MoveTo(field_size.0 + 5, 10),
+      MoveTo(field_size.width + 5, 10),
       Print(format!(
         "{} {} {} {} {} {} {} {}",
           "Зеленые и".with(Cyan),
@@ -161,11 +144,11 @@ impl StaticUI {
             .to_string()
             .with(gold_appl.get_symbol().color)
         )),
-      MoveTo(field_size.0 + 5, 11),
+      MoveTo(field_size.width + 5, 11),
       Print(
         "очков соответственно. Игра заканчивается когда"
         .with(Cyan)),
-      MoveTo(field_size.0 + 5, 12),
+      MoveTo(field_size.width + 5, 12),
       Print("Змея".with(DarkGreen)),
       Print(" ест саму себя или кирпич ".with(Cyan)),
       Print(brick.get_symbol()),
@@ -182,7 +165,7 @@ impl Drawable for StaticUI {
       label.draw()?;
     }
 
-    Self::print_frame(&self)?;
+    Self::print_frames(&self)?;
     Self::print_help(&self)
   }
 }

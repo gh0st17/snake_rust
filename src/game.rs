@@ -1,8 +1,8 @@
 use crate::snake::{Snake, Direction};
 use crate::food::{Food, generate_food};
+use crate::ui::Size;
 use crate::ui::{UI, Pos, ui_items::Symbol};
 
-use std::thread::JoinHandle;
 use std::{
   io::Result,
   thread::{sleep, self},
@@ -28,8 +28,8 @@ pub struct Game {
   score: u16,
   dir: Arc<Atomic<Direction>>,
   ui: Arc<Mutex<UI>>,
-  field_size: (u16, u16),
-  terminal_size: (u16, u16)
+  field_size: Size,
+  terminal_size: Size
 }
 
 impl Game {
@@ -42,7 +42,7 @@ impl Game {
       dir: Arc::new(Atomic::new(Direction::RIGHT)),
       field_size: ui.field_size,
       ui: Arc::new(Mutex::new(ui)),
-      terminal_size: terminal::size().unwrap()
+      terminal_size: Size::from(terminal::size().unwrap())
     }
   }
 
@@ -70,12 +70,12 @@ impl Game {
     self.is_over.load(Ordering::Acquire)
   }
 
-  fn time_update(&mut self) -> Result<JoinHandle<Result<()>>> {
+  fn time_update(&mut self) -> Result<()> {
     let stop_bool = self.is_over.clone();
     let pause = self.pause.clone();
     let ui = self.ui.clone();
 
-    let handle = thread::spawn(move || -> Result<()> { 
+    let _ = thread::spawn(move || -> Result<()> { 
       let (mut time, delay) = (0.0f64, 0.1f64);
   
       loop {
@@ -95,10 +95,10 @@ impl Game {
       Ok(())  
     });
 
-    Ok(handle)
+    Ok(())
   }
 
-  fn snake_update(&mut self) -> Result<JoinHandle<Result<()>>> {
+  fn snake_update(&mut self) -> Result<()> {
     let stop_bool = self.is_over.clone();
     let pause = self.pause.clone();
     let boost = self.boost.clone();
@@ -123,21 +123,20 @@ impl Game {
 
     let mut shared_self = self.clone();
 
-    let handle = thread::spawn(move || -> Result<()> {
-      let mut snake_pos = snake.get_head_pos();
+    let _ = thread::spawn(move || -> Result<()> {
       let mut _boost = boost.load(Ordering::Acquire);
-      let mut food = generate_food(&field_size, true, (0,0));
+      let mut apple = generate_food(&field_size, true, &Pos::from((0, 0)));
       
       let mut bricks: Vec<Box<dyn Food>> = Vec::new();
-      let density = field_size.0 as u64 * field_size.1 as u64 / 100;
+      let density = field_size.width as u64 * field_size.height as u64 / 100;
 
       for _ in 0..density {
-        bricks.push(generate_food(&field_size, false, (0,0)));
+        bricks.push(generate_food(&field_size, false, &Pos::from((0, 0))));
       }
 
       let local_self = &mut shared_self;
 
-      ui.lock().unwrap().draw(&food)?;
+      ui.lock().unwrap().draw(&apple)?;
       ui.lock().unwrap().draw(&snake)?;
       ui.lock().unwrap().draw_vec(&bricks)?;
 
@@ -162,10 +161,9 @@ impl Game {
           break;
         }
 
-        if snake.check_pos(&food.get_pos()) {
+        if snake.check_pos(&apple.get_pos()) {
           local_self.food_generator(
-            &mut food, &mut bricks,
-            &mut snake_pos, &mut snake
+            &mut apple, &mut bricks, &mut snake
           )?;
         }
 
@@ -205,17 +203,17 @@ impl Game {
       Ok(())
     });
 
-    Ok(handle)
+    Ok(())
   }
 
-  fn fetch_key(&mut self) -> Result<JoinHandle<Result<()>>>{
+  fn fetch_key(&mut self) -> Result<()> {
     let stop_bool = self.is_over.clone();
     let pause = self.pause.clone();
     let boost = self.boost.clone();
     let ui = self.ui.clone();
     let dir = self.dir.clone();
 
-    let handle = thread::spawn(move || -> Result<()> {
+    let _ = thread::spawn(move || -> Result<()> {
       loop {
         let event = read()?;
 
@@ -267,43 +265,43 @@ impl Game {
 
       Ok(())
     });
-    
-    Ok(handle)
+
+    Ok(())
   }
 
-  fn food_generator(&mut self, food: &mut Box<dyn Food>, bricks: &mut Vec<Box<dyn Food>>,
-      snake_pos: &mut Pos, snake: &mut Snake) -> Result<()> {
+  fn food_generator(&mut self, apple: &mut Box<dyn Food>, bricks: &mut Vec<Box<dyn Food>>,
+      snake: &mut Snake) -> Result<()> {
     
-    self.score += food.get_value();
+    self.score += apple.get_value();
 
     self.ui.lock().unwrap().print_stats(
       &self.score,
       &(snake.get_parts().len() as u16)
     )?;
 
-    let pos = food.get_pos();
+    let pos = apple.get_pos();
     snake.add_part(pos);
     
-    *snake_pos = snake.get_head_pos();
+    let snake_pos = snake.get_head_pos();
     loop {
-      *food = generate_food(&self.field_size, true, *snake_pos);
+      *apple = generate_food(&self.field_size, true, &snake_pos);
 
-      if !snake.check_pos(&food.get_pos()) {
+      if !snake.check_pos(&apple.get_pos()) {
         break;
       }
     }
 
-    self.ui.lock().unwrap().draw(food)?;
+    self.ui.lock().unwrap().draw(apple)?;
 
     for i in 0..bricks.len() {
       self.ui.lock().unwrap().draw(&Symbol::new(bricks[i].get_pos()))?;
 
       'same:
       loop {
-        bricks[i] = generate_food(&self.field_size, false, *snake_pos);
+        bricks[i] = generate_food(&self.field_size, false, &snake_pos);
 
         if snake.check_pos(&bricks[i].get_pos()) ||
-            food.get_pos() == bricks[i].get_pos() {
+        apple.get_pos() == bricks[i].get_pos() {
           continue;
         }
         
@@ -318,17 +316,16 @@ impl Game {
       self.ui.lock().unwrap().draw(&bricks[i])?;
     }
 
-
     Ok(())
   }
 
-  fn terminal_size_checker(&mut self) -> Result<JoinHandle<Result<()>>> {
+  fn terminal_size_checker(&mut self) -> Result<()> {
     let stop_bool = self.is_over.clone();
     let terminal_size = self.terminal_size.clone();
 
-    let handle = thread::spawn(move || -> Result<()> {
+    let _ = thread::spawn(move || -> Result<()> {
       loop {
-        if terminal_size != terminal::size().unwrap() {
+        if terminal_size != Size::from(terminal::size()?) {
           stop_bool.store(true, Ordering::Release);
           break;
         }
@@ -340,6 +337,6 @@ impl Game {
       Ok(())
     });
 
-    Ok(handle)
+    Ok(())
   }
 }

@@ -6,6 +6,7 @@ use ui_items::{Label, PopupMessage};
 
 use crate::error::{*, self};
 
+use core::fmt;
 use std::{
   io::{self, Result},
   thread::sleep,
@@ -14,21 +15,100 @@ use std::{
 
 use crossterm::{
   terminal::{*, self},
-  cursor, style::{self, Color::*, Stylize},
+  cursor::{self, MoveTo}, style::{self, Color::*, Stylize},
   execute
 };
 
 const MINIMUM_WIDTH: u16 = 80;
 const MINIMUM_HEIGHT: u16 = 14;
 
-pub type Pos = (u16, u16);
+#[derive(Copy, Clone, PartialEq)]
+pub struct Pos {
+  pub x: u16,
+  pub y: u16
+}
+
+impl Pos {
+  pub fn add_x(mut self, x: u16) -> Self {
+    self.x += x;
+    self
+  }
+
+  pub fn add_y(mut self, y: u16) -> Self {
+    self.y += y;
+    self
+  }
+}
+
+impl From<Pos> for MoveTo {
+  fn from(pos: Pos) -> MoveTo {
+    MoveTo(pos.x, pos.y)
+  }
+}
+
+impl From<Size> for Pos {
+  fn from(size: Size) -> Pos {
+    Pos {
+      x: size.width,
+      y: size.height
+    }
+  }
+}
+
+impl From<(u16, u16)> for Pos {
+  fn from(pos: (u16, u16)) -> Pos {
+    Pos {
+      x: pos.0,
+      y: pos.1
+    }
+  }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct Size {
+  pub width: u16,
+  pub height: u16
+}
+
+impl Size {
+  pub fn add_width(mut self, width: u16) -> Self {
+    self.width += width;
+    self
+  }
+
+  pub fn add_height(mut self, height: u16) -> Self {
+    self.height += height;
+    self
+  }
+}
+
+impl From<Size> for MoveTo {
+  fn from(size: Size) -> MoveTo {
+    MoveTo(size.width, size.height)
+  }
+}
+
+impl From<(u16, u16)> for Size {
+  fn from(size: (u16, u16)) -> Size {
+    Size {
+      width: size.0,
+      height: size.1
+    }
+  }
+}
+
+impl fmt::Display for Size {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}x{}", self.width, self.height)
+  }
+}
 
 pub trait Drawable {
   fn draw(&self) -> Result<()>;
 }
 
 pub struct UI {
-  pub field_size: Pos,
+  pub field_size: Size,
   static_ui: StaticUI,
   score: Label,
   s_length: Label,
@@ -54,27 +134,27 @@ impl UI {
 
     width  = 23 + (width  - MINIMUM_WIDTH);
     height = 12 + (height - MINIMUM_HEIGHT);
-    let field_size = (width, height);
+    let field_size = Size{ width, height };
     let static_ui = StaticUI::new(field_size);
     static_ui.draw()?;
-
+    
     Ok(UI {
       field_size,
       static_ui,
       score: Label::new(
-        (width + 11, 1),
+        Pos::from((width + 11, 1)),
         "0".to_string()
           .with(Magenta)
           .bold()
         ),
       s_length: Label::new(
-        (width + 17, 2),
+        Pos::from((width + 17, 2)),
         "0".to_string()
           .with(Magenta)
           .bold()
         ),
       time: Label::new(
-        (width + 12, 3),
+        Pos::from((width + 12, 3)),
         "0м0.0с".to_string()
           .with(Magenta)
           .bold()
@@ -87,13 +167,13 @@ impl UI {
   }
 
   pub fn print_popup_message(&self, message: String, is_delayed: bool) -> Result<()> {
-    let mut origin = terminal::size()?;
-    origin.0 /= 2;
-    origin.1 /= 2;
-    origin.0 -= (message.chars().count() as u16 / 2) + 2;
-    origin.1 -= 2;
+    let mut origin = Size::from(terminal::size()?);
+    origin.width  /= 2;
+    origin.height /= 2;
+    origin.width  -= (message.chars().count() as u16 / 2) + 2;
+    origin.height -= 2;
     
-    PopupMessage::new(origin, message).draw()?;
+    PopupMessage::new(Pos::from(origin), message).draw()?;
 
     if is_delayed {
       sleep(Duration::from_secs(3));

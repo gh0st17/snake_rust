@@ -1,7 +1,7 @@
 use rand::Rng;
 use crossterm::style::Color;
 
-use crate::ui::{Pos, Drawable, ui_items::Symbol};
+use crate::ui::{Pos, Drawable, ui_items::Symbol, Size};
 
 pub enum FoodType {
   GreenApple, GoldApple, Brick
@@ -58,20 +58,20 @@ impl Food for Brick {
   fn get_pos(&self) -> Pos { self.0 }
 }
 
-pub fn generate_food(field_size: &Pos, kind: bool, snake_pos: Pos) -> Box<dyn Food> {
+pub fn generate_food(field_size: &Size, edible: bool, snake_pos: &Pos) -> Box<dyn Food> {
   let mut rng = rand::thread_rng();
-  let mut pos = (0, 0);
+  let mut pos = Pos::from((0, 0));
 
   loop {
-    pos.0 = rng.gen_range(3..=field_size.0);
-    pos.1 = rng.gen_range(2..=field_size.1);
+    pos.x = rng.gen_range(3..=field_size.width);
+    pos.y = rng.gen_range(2..=field_size.height);
 
-    if pos.0 != snake_pos.0 && pos.1 != snake_pos.1 {
+    if pos != *snake_pos {
       break;
     }
   }
   
-  if kind {
+  if edible {
     let apple = rng.gen_range(0..=1u16);
     if apple == 0 {
       Box::new(GreenApple(pos))
@@ -87,8 +87,8 @@ pub fn generate_food(field_size: &Pos, kind: bool, snake_pos: Pos) -> Box<dyn Fo
 
 pub fn get_food_with_type(food_type: FoodType) -> Box<dyn Food> {
   match food_type {
-    FoodType::GreenApple => Box::new(GreenApple((0, 0))),
-    FoodType::GoldApple => Box::new(GoldApple((0, 0))),
-    FoodType::Brick => Box::new(Brick((0, 0)))
+    FoodType::GreenApple => Box::new(GreenApple(Pos::from((0, 0)))),
+    FoodType::GoldApple => Box::new(GoldApple(Pos::from((0, 0)))),
+    FoodType::Brick => Box::new(Brick(Pos::from((0, 0))))
   }
 }

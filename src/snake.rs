@@ -1,6 +1,6 @@
 use crossterm::style::Color::{self, *};
 
-use crate::ui::{Pos, Drawable, ui_items::Symbol};
+use crate::ui::{Pos, Size, Drawable, ui_items::Symbol};
 
 #[derive(Copy, Clone)]
 pub enum Direction { UP, DOWN, LEFT, RIGHT }
@@ -27,26 +27,26 @@ impl SnakePart {
     self.symbol.color = color;
   }
 
-  pub fn update(&mut self, dir: Direction, max_size: Pos) {
+  pub fn update(&mut self, dir: Direction, max_size: Size) {
     match dir {
-      Direction::UP    => self.symbol.pos.1 -= 1,
-      Direction::DOWN  => self.symbol.pos.1 += 1,
-      Direction::LEFT  => self.symbol.pos.0 -= 1,
-      Direction::RIGHT => self.symbol.pos.0 += 1
+      Direction::UP    => self.symbol.pos.y -= 1,
+      Direction::DOWN  => self.symbol.pos.y += 1,
+      Direction::LEFT  => self.symbol.pos.x -= 1,
+      Direction::RIGHT => self.symbol.pos.x += 1
     }
 
-    if self.symbol.pos.0 == 1 {
-      self.symbol.pos.0 =  max_size.0 + 1;
+    if self.symbol.pos.x == 1 {
+      self.symbol.pos.x =  max_size.width + 1;
     }
-    else if self.symbol.pos.0 == max_size.0 + 2 {
-      self.symbol.pos.0 = 2;
+    else if self.symbol.pos.x == max_size.width + 2 {
+      self.symbol.pos.x = 2;
     }
 
-    if self.symbol.pos.1 == 0 {
-      self.symbol.pos.1 = max_size.1;
+    if self.symbol.pos.y == 0 {
+      self.symbol.pos.y = max_size.height;
     }
-    else if self.symbol.pos.1 == max_size.1 + 1 {
-      self.symbol.pos.1 = 1;
+    else if self.symbol.pos.y == max_size.height + 1 {
+      self.symbol.pos.y = 1;
     }
   }
 }
@@ -67,7 +67,7 @@ impl Snake {
     Snake {
       parts: vec![
         SnakePart::new(
-          Symbol::new((3, 1))
+          Symbol::new(Pos::from((3, 1)))
             .ch('◇')
             .color(Green)
           )
@@ -80,7 +80,7 @@ impl Snake {
     &self.parts
   }
 
-  pub fn update(&mut self, max_size: Pos) -> Pos {
+  pub fn update(&mut self, max_size: Size) -> Pos {
     let mut prev_pos = self.parts[0].get_pos();
     let mut new_pos = prev_pos.clone();
 

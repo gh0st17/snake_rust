@@ -45,7 +45,7 @@ impl Drawable for Symbol {
   fn draw(&self) -> Result<()> {
     execute!(
       io::stdout(),
-      MoveTo(self.pos.0, self.pos.1),
+      MoveTo(self.pos.x, self.pos.y),
       Print(self.ch.with(self.color))
     )
   }
@@ -59,7 +59,7 @@ impl fmt::Display for Symbol {
 
 pub struct Label {
   pos: Pos,
-  pub message: StyledContent<String>
+  message: StyledContent<String>
 }
 
 impl Label {
@@ -76,7 +76,7 @@ impl Drawable for Label {
   fn draw(&self) -> Result<()> {
     execute!(
       io::stdout(),
-      MoveTo(self.pos.0, self.pos.1),
+      MoveTo::from(self.pos),
       Print(&self.message)
     )
   }
@@ -99,23 +99,23 @@ impl Drawable for PopupMessage {
 
     execute!(
       io::stdout(),
-      MoveTo(self.origin.0, self.origin.1),
+      MoveTo::from(self.origin),
       Print(format!(
         "╔{:═<1$}╗", "",
         char_count + 2
       ).with(DarkRed).bold()),
-      MoveTo(self.origin.0, self.origin.1 + 1),
+      MoveTo::from(self.origin.add_y(1)),
       Print(format!(
         "║{: <1$}║", "",
         char_count + 2
       ).with(DarkRed).bold()),
-      MoveTo(self.origin.0, self.origin.1 + 2),
+      MoveTo::from(self.origin.add_y(2)),
       Print(format!(
         "╚{:═<1$}╝", "",
         char_count + 2
       ).with(DarkRed).bold()),
 
-      MoveTo(self.origin.0 + 2, self.origin.1 + 1),
+      MoveTo::from(self.origin.add_x(2).add_y(1)),
       Print(&self.message.clone().with(Red).bold())
     )?;
 
