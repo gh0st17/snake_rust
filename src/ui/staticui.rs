@@ -155,11 +155,11 @@ impl StaticUI {
           "яблоки добавляют".with(Cyan),
           green_appl.get_value()
             .to_string()
-            .with(Cyan),
+            .with(green_appl.get_symbol().color),
           "и".with(Cyan),
           gold_appl.get_value()
             .to_string()
-            .with(Cyan)
+            .with(gold_appl.get_symbol().color)
         )),
       MoveTo(field_size.0 + 5, 11),
       Print(
