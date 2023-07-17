@@ -124,12 +124,14 @@ impl Game {
     let mut shared_self = self.clone();
 
     let handle = thread::spawn(move || -> Result<()> {
-      let mut snake_pos = snake.get_pos();
+      let mut snake_pos = snake.get_head_pos();
       let mut _boost = boost.load(Ordering::Acquire);
       let mut food = generate_food(&field_size, true, (0,0));
       
       let mut bricks: Vec<Box<dyn Food>> = Vec::new();
-      for _ in 0..5 {
+      let density = field_size.0 as u64 * field_size.1 as u64 / 100;
+
+      for _ in 0..density {
         bricks.push(generate_food(&field_size, false, (0,0)));
       }
 
@@ -282,7 +284,7 @@ impl Game {
     let pos = food.get_pos();
     snake.add_part(pos);
     
-    *snake_pos = snake.get_pos();
+    *snake_pos = snake.get_head_pos();
     loop {
       *food = generate_food(&self.field_size, true, *snake_pos);
 

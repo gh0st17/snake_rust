@@ -150,8 +150,8 @@ impl Snake {
     false
   }
 
-  pub fn get_pos(&self) -> Pos {
-    self.parts[0].get_pos()
+  pub fn get_head_pos(&self) -> Pos {
+    self.parts.first().unwrap().get_pos()
   }
 
   pub fn set_head_color(&mut self, color: Color) {
