@@ -23,6 +23,7 @@ use std::{
 };
 
 use atomic::Atomic;
+
 use crossterm::{
   event::*,
   terminal,
@@ -70,13 +71,9 @@ impl Game {
       }
     }
 
-    while !self.is_over() {
+    while !self.is_over.load(Ordering::Acquire) {
       sleep(Duration::from_secs(1));
     }
-  }
-
-  fn is_over(&self) -> bool {
-    self.is_over.load(Ordering::Acquire)
   }
 
   fn time_update(&mut self) -> Result<()> {
