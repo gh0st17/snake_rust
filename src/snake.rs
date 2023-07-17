@@ -1,6 +1,10 @@
 use crossterm::style::Color::{self, *};
 
-use crate::ui::{Pos, Size, Drawable, ui_items::Symbol};
+use crate::ui::{
+  dimensions::{Pos, Size},
+  Drawable,
+  ui_items::Symbol
+};
 
 #[derive(Copy, Clone)]
 pub enum Direction { UP, DOWN, LEFT, RIGHT }

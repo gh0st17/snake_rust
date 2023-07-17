@@ -3,16 +3,19 @@ use std::io::{self, Result};
 use crossterm::{
   terminal,
   cursor::MoveTo,
-  style::{
-    Print,
-    Color::*,
-    *
-  },
+  style::{Print, Color::*, Stylize},
   execute
 };
 
-use crate::ui::{Pos, Size, ui_items::Label};
-use crate::food::{FoodType, get_food_with_type};
+use crate::ui::{
+  dimensions::{Pos, Size},
+  ui_items::Label
+};
+
+use crate::food::{
+  FoodType,
+  get_food_with_type
+};
 
 pub struct StaticUI {
   field_size: Size,

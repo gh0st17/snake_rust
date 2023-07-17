@@ -1,7 +1,11 @@
 use rand::Rng;
 use crossterm::style::Color;
 
-use crate::ui::{Pos, Drawable, ui_items::Symbol, Size};
+use crate::ui::{
+  dimensions::{Pos, Size},
+  Drawable,
+  ui_items::Symbol
+};
 
 pub enum FoodType {
   GreenApple, GoldApple, Brick

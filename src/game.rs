@@ -1,7 +1,16 @@
-use crate::snake::{Snake, Direction};
-use crate::food::{Food, generate_food};
-use crate::ui::Size;
-use crate::ui::{UI, Pos, ui_items::Symbol};
+use crate::snake::{
+  Snake, Direction
+};
+
+use crate::food::{
+  Food, generate_food
+};
+
+use crate::ui::{
+  UI,
+  dimensions::{Pos, Size},
+  ui_items::Symbol
+};
 
 use std::{
   io::Result,

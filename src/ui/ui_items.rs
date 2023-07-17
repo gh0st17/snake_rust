@@ -1,4 +1,7 @@
-use crate::ui::{Pos, Drawable};
+use crate::ui::{
+  dimensions::Pos,
+  Drawable
+};
 
 use crossterm::{
   style::{
