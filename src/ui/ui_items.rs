@@ -11,6 +11,7 @@ use crossterm::{
   execute
 };
 
+use core::fmt;
 use std::io::{self, Result};
 
 #[derive(Copy, Clone)]
@@ -47,6 +48,12 @@ impl Drawable for Symbol {
       MoveTo(self.pos.0, self.pos.1),
       Print(self.ch.with(self.color))
     )
+  }
+}
+
+impl fmt::Display for Symbol {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    self.ch.with(self.color).fmt(f)
   }
 }
 

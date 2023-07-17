@@ -12,6 +12,7 @@ use crossterm::{
 };
 
 use crate::ui::ui_items::Label;
+use crate::food::{FoodType, get_food_with_type};
 
 pub struct StaticUI {
   field_size: (u16, u16),
@@ -23,9 +24,21 @@ impl StaticUI {
     Self {
       field_size,
       static_labels: vec![
-        Label::new((field_size.0 + 5, 1), "Очки:".to_string().with(Cyan)),
-        Label::new((field_size.0 + 5, 2), "Длина змеи:".to_string().with(Cyan)),
-        Label::new((field_size.0 + 5, 3), "Время:".to_string().with(Cyan))
+        Label::new(
+          (field_size.0 + 5, 1),
+          "Очки:".to_string()
+            .with(Cyan)
+        ),
+        Label::new(
+          (field_size.0 + 5, 2),
+          "Длина змеи:".to_string()
+            .with(Cyan)
+        ),
+        Label::new(
+          (field_size.0 + 5, 3),
+          "Время:".to_string()
+            .with(Cyan)
+        )
       ],
     }
   }
@@ -111,6 +124,10 @@ impl StaticUI {
 
   pub fn print_help(&self) -> Result<()> {
     let field_size = &self.field_size;
+    let green_appl = get_food_with_type(FoodType::GreenApple);
+    let gold_appl  = get_food_with_type(FoodType::GoldApple);
+    let brick      = get_food_with_type(FoodType::Brick);
+
     execute!(
       io::stdout(),
       MoveTo(field_size.0 + 5, 6),
@@ -129,11 +146,21 @@ impl StaticUI {
       Print("ESC".with(Magenta).bold()),
       Print(" для выхода. ".with(Cyan)),
       MoveTo(field_size.0 + 5, 10),
-      Print("Зеленые ".with(Cyan)),
-      Print("◉".with(Green)),
-      Print(" и золотые ".with(Cyan)),
-      Print("◉".with(Yellow)),
-      Print(" яблоки добавляют 10 и 20".with(Cyan)),
+      Print(format!(
+        "{} {} {} {} {} {} {} {}",
+          "Зеленые и".with(Cyan),
+          green_appl.get_symbol(),
+          "золотые".with(Cyan),
+          gold_appl.get_symbol(),
+          "яблоки добавляют".with(Cyan),
+          green_appl.get_value()
+            .to_string()
+            .with(Cyan),
+          "и".with(Cyan),
+          gold_appl.get_value()
+            .to_string()
+            .with(Cyan)
+        )),
       MoveTo(field_size.0 + 5, 11),
       Print(
         "очков соответственно. Игра заканчивается когда"
@@ -141,7 +168,7 @@ impl StaticUI {
       MoveTo(field_size.0 + 5, 12),
       Print("Змея".with(DarkGreen)),
       Print(" ест саму себя или кирпич ".with(Cyan)),
-      Print("▬".with(Red)),
+      Print(brick.get_symbol()),
       Print(" .".with(Cyan)),
     )
   }

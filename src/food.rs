@@ -3,6 +3,10 @@ use crossterm::style::Color;
 
 use crate::ui::{Pos, Drawable, ui_items::Symbol};
 
+pub enum FoodType {
+  GreenApple, GoldApple, Brick
+}
+
 pub trait Food {
   fn get_symbol(&self) -> Symbol;
   fn get_value(&self) -> u16;
@@ -78,5 +82,13 @@ pub fn generate_food(field_size: &Pos, kind: bool, snake_pos: Pos) -> Box<dyn Fo
   }
   else {
     Box::new(Brick(pos))
+  }
+}
+
+pub fn get_food_with_type(food_type: FoodType) -> Box<dyn Food> {
+  match food_type {
+    FoodType::GreenApple => Box::new(GreenApple((0, 0))),
+    FoodType::GoldApple => Box::new(GoldApple((0, 0))),
+    FoodType::Brick => Box::new(Brick((0, 0)))
   }
 }
