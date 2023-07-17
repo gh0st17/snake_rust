@@ -17,7 +17,7 @@ use std::{
   thread::{sleep, self},
   time::Duration,
   sync::{
-    Arc, Mutex,
+    Arc, Mutex, Barrier,
     atomic::{AtomicBool, Ordering}
   }
 };
@@ -32,6 +32,7 @@ use crossterm::{
 
 #[derive(Clone)]
 pub struct Game {
+  barrier: Arc<Barrier>,
   is_over: Arc<AtomicBool>,
   pause: Arc<AtomicBool>,
   boost: Arc<AtomicBool>,
@@ -45,6 +46,7 @@ pub struct Game {
 impl Game {
   pub fn new(ui: UI) -> Self {
     Game {
+      barrier: Arc::new(Barrier::new(2)),
       is_over: Arc::new(AtomicBool::new(false)),
       pause: Arc::new(AtomicBool::new(false)),
       boost: Arc::new(AtomicBool::new(false)),
@@ -71,12 +73,11 @@ impl Game {
       }
     }
 
-    while !self.is_over.load(Ordering::Acquire) {
-      sleep(Duration::from_secs(1));
-    }
+    self.barrier.wait();
   }
 
   fn time_update(&mut self) -> Result<()> {
+    let barrier = self.barrier.clone();
     let stop_bool = self.is_over.clone();
     let pause = self.pause.clone();
     let ui = self.ui.clone();
@@ -98,6 +99,7 @@ impl Game {
         }
       }
 
+      barrier.wait();
       Ok(())  
     });
 
@@ -115,17 +117,10 @@ impl Game {
     
     let s_length = snake.get_parts().len() as u16 - 1;
 
-    let result = self.ui
+    self.ui
       .lock()
       .unwrap()
-      .print_stats(&self.score, &s_length);
-
-    match result {
-      Ok(_) => (),
-      Err(err) => {
-        panic!("Ошибка при печати статистики: {}", err)
-      }
-    };
+      .print_stats(&self.score, &s_length)?;
 
     let mut shared_self = self.clone();
 

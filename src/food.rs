@@ -70,7 +70,7 @@ pub fn generate_food(field_size: &Size, edible: bool, snake_pos: &Pos) -> Box<dy
     pos.x = rng.gen_range(3..=field_size.width);
     pos.y = rng.gen_range(2..=field_size.height);
 
-    if pos != *snake_pos {
+    if !pos.is_overlaps(snake_pos) {
       break;
     }
   }

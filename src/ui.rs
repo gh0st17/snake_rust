@@ -92,11 +92,11 @@ impl UI {
   }
 
   pub fn print_popup_message(&self, message: String, is_delayed: bool) -> Result<()> {
-    let mut origin = Size::from(terminal::size()?);
-    origin.width  /= 2;
-    origin.height /= 2;
-    origin.width  -= (message.chars().count() as u16 / 2) + 2;
-    origin.height -= 2;
+    let mut origin = Pos::from(terminal::size()?);
+    origin.x /= 2;
+    origin.y /= 2;
+    origin.x -= (message.chars().count() as u16 / 2) + 2;
+    origin.y -= 2;
     
     PopupMessage::new(Pos::from(origin), message).draw()?;
 

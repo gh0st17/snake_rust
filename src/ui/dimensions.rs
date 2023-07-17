@@ -17,20 +17,15 @@ impl Pos {
     self.y += y;
     self
   }
+
+  pub fn is_overlaps(&self, pos: &Self) -> bool {
+    self.x == pos.x || self.y == pos.y
+  }
 }
 
 impl From<Pos> for MoveTo {
   fn from(pos: Pos) -> MoveTo {
     MoveTo(pos.x, pos.y)
-  }
-}
-
-impl From<Size> for Pos {
-  fn from(size: Size) -> Pos {
-    Pos {
-      x: size.width,
-      y: size.height
-    }
   }
 }
 
