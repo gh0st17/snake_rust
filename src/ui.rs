@@ -134,11 +134,11 @@ impl UI {
     self.time.draw()
   }
 
-  pub fn draw<D: Drawable>(&self, drawable: &D) -> Result<()>{
+  pub fn draw<D: Drawable>(&self, drawable: &D) -> Result<()> {
     drawable.draw()
   }
 
-  pub fn draw_vec<D: Drawable>(&self, drawables: &Vec<D>) -> Result<()>{
+  pub fn draw_vec<D: Drawable>(&self, drawables: &Vec<D>) -> Result<()> {
     for drawable in drawables {
       drawable.draw()?;
     }

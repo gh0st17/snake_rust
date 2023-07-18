@@ -126,13 +126,19 @@ impl Game {
 
     let _ = thread::spawn(move || -> Result<()> {
       let mut _boost = boost.load(Ordering::Acquire);
-      let mut apple = generate_food(&field_size, true, &Pos::from((0, 0)));
+
+      let mut apple = generate_food(
+        &field_size, true, &Pos::from((0, 0))
+      );
       
       let mut bricks: Vec<Box<dyn Food>> = Vec::new();
-      let density = field_size.width as u64 * field_size.height as u64 / 100;
+      let density = field_size.width as u64 * 
+        field_size.height as u64 / 100;
 
       for _ in 0..density {
-        bricks.push(generate_food(&field_size, false, &Pos::from((0, 0))));
+        bricks.push(generate_food(
+          &field_size, false, &Pos::from((0, 0))
+        ));
       }
 
       let local_self = &mut shared_self;
@@ -171,7 +177,9 @@ impl Game {
         for brick in &bricks {
           if snake.check_pos(&brick.get_pos()) {
             ui.lock().unwrap()
-              .print_popup_message("Съел кирпич!".to_string(), true)?;
+              .print_popup_message(
+                "Съел кирпич!".to_string(), true
+              )?;
 
             stop_bool.store(true, Ordering::Release);
             break 'stop;
@@ -248,7 +256,9 @@ impl Game {
           let _ui = ui.lock().unwrap();
 
           if !_pause {
-            _ui.print_popup_message("Пауза".to_string(), false)?;
+            _ui.print_popup_message(
+              "Пауза".to_string(), false
+            )?;
           }
           else {
             _ui.print_static()?;
@@ -257,7 +267,9 @@ impl Game {
 
         if event == Event::Key(KeyCode::Esc.into()) {
           ui.lock().unwrap()
-            .print_popup_message("Прерывание...".to_string(), true)?;
+            .print_popup_message(
+              "Прерывание...".to_string(), true
+            )?;
 
           stop_bool.store(true, Ordering::Release);
           break;
@@ -270,12 +282,15 @@ impl Game {
     Ok(())
   }
 
-  fn food_generator(&mut self, apple: &mut Box<dyn Food>, bricks: &mut Vec<Box<dyn Food>>,
+  fn food_generator(&mut self, apple: &mut Box<dyn Food>,
+      bricks: &mut Vec<Box<dyn Food>>,
       snake: &mut Snake, last_pos: &Pos) -> Result<()> {
     
+    let mut ui = self.ui.lock().unwrap();
+
     self.score += apple.get_value();
 
-    self.ui.lock().unwrap().print_stats(
+    ui.print_stats(
       &self.score,
       &(snake.get_parts().len() as u16)
     )?;
@@ -284,7 +299,9 @@ impl Game {
     
     let snake_pos = snake.get_head_pos();
     loop {
-      *apple = generate_food(&self.field_size, true, &snake_pos);
+      *apple = generate_food(
+        &self.field_size, true, &snake_pos
+      );
 
       if !snake.check_pos(&apple.get_pos()) {
         break;
@@ -292,11 +309,13 @@ impl Game {
     }
 
     for i in 0..bricks.len() {
-      self.ui.lock().unwrap().draw(&Symbol::new(bricks[i].get_pos()))?;
+      ui.draw(&Symbol::new(bricks[i].get_pos()))?;
 
       'same:
       loop {
-        bricks[i] = generate_food(&self.field_size, false, &snake_pos);
+        bricks[i] = generate_food(
+          &self.field_size, false, &snake_pos
+        );
 
         if snake.check_pos(&bricks[i].get_pos()) ||
         apple.get_pos() == bricks[i].get_pos() {
@@ -311,8 +330,8 @@ impl Game {
         break;
       }
 
-      self.ui.lock().unwrap().draw(&bricks[i])?;
-      self.ui.lock().unwrap().draw(apple)?;
+      ui.draw(&bricks[i])?;
+      ui.draw(apple)?;
     }
 
     Ok(())

@@ -62,7 +62,9 @@ impl Food for Brick {
   fn get_pos(&self) -> Pos { self.0 }
 }
 
-pub fn generate_food(field_size: &Size, edible: bool, snake_pos: &Pos) -> Box<dyn Food> {
+pub fn generate_food(
+  field_size: &Size, edible: bool, snake_pos: &Pos
+) -> Box<dyn Food> {
   let mut rng = rand::thread_rng();
   let mut pos = Pos::from((0, 0));
 
