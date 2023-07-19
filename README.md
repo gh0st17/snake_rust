@@ -1,6 +1,6 @@
 # Snake
 <p align="center">
-<img src="https://i.ibb.co/MgHKf8b/2023-07-19-17-26-55.png">
+<img src="https://i.ibb.co/hWXtMTN/snake.png">
 
 <p align="center">
 Консольная игра Змейка
