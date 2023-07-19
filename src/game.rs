@@ -75,7 +75,7 @@ impl Game {
     let threads = vec![
       self.time_update(),
       self.snake_update(),
-      self.fetch_key(),
+      self.fetch_event(),
       self.terminal_size_checker()
     ];
 
@@ -233,7 +233,7 @@ impl Game {
     Ok(())
   }
 
-  fn fetch_key(&mut self) -> Result<()> {
+  fn fetch_event(&mut self) -> Result<()> {
     let stop_bool = self.is_over.clone();
     let pause = self.pause.clone();
     let boost = self.boost.clone();
@@ -263,8 +263,8 @@ impl Game {
                 "Прерывание...".to_string(), true
               )?;
 
-            stop_bool.store(true, Ordering::Release);
-            break;
+              stop_bool.store(true, Ordering::Release);
+              break;
             }
           }
         }
@@ -280,7 +280,7 @@ impl Game {
             )?;
           }
           else {
-            _ui.print_static()?;
+            _ui.clear_popup_message()?;
           }
         }
       }

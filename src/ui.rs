@@ -25,6 +25,8 @@ use crossterm::{
   execute
 };
 
+use self::ui_items::Symbol;
+
 const MINIMUM_WIDTH: u16 = 80;
 const MINIMUM_HEIGHT: u16 = 14;
 
@@ -34,7 +36,6 @@ pub trait Drawable {
 
 pub struct UI {
   pub field_size: Size,
-  static_ui: StaticUI,
   score: Label,
   s_length: Label,
   time: Label
@@ -65,7 +66,6 @@ impl UI {
     
     Ok(UI {
       field_size,
-      static_ui,
       score: Label::new(
         Pos::from((width + 11, 1)),
         "0".to_string()
@@ -87,18 +87,23 @@ impl UI {
     })
   }
 
-  pub fn print_static(&self) -> Result<()> {
-    self.static_ui.draw()
+  pub fn clear_popup_message(&self) -> Result<()> {
+    let terminal_size = terminal::size()?;
+    let start_x = terminal_size.0 - 27;
+    for x in start_x..terminal_size.0 {
+      for y in 1..5 {
+        Symbol::new(Pos::from((x, y))).draw()?;
+      }
+    }
+
+    Ok(())
   }
 
   pub fn print_popup_message(&self, message: String, is_delayed: bool) -> Result<()> {
-    let mut origin = Pos::from(terminal::size()?);
-    origin.x /= 2;
-    origin.y /= 2;
-    origin.x -= (message.chars().count() as u16 / 2) + 2;
-    origin.y -= 2;
+    let mut x = terminal::size()?.0 - 14;
+    x -= (message.chars().count() as u16 / 2) + 2;
     
-    PopupMessage::new(Pos::from(origin), message).draw()?;
+    PopupMessage::new(Pos::from((x, 1)), message).draw()?;
 
     if is_delayed {
       sleep(Duration::from_secs(3));
