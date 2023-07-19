@@ -57,7 +57,7 @@ impl UI {
       cursor::Hide
     )?;
 
-    width  = 23 + (width  - MINIMUM_WIDTH);
+    width  = 27 + (width  - MINIMUM_WIDTH);
     height = 12 + (height - MINIMUM_HEIGHT);
     let field_size = Size{ width, height };
     let static_ui = StaticUI::new(field_size);

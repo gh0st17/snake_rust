@@ -15,7 +15,7 @@ use crossterm::{
 };
 
 use core::fmt;
-use std::io::{self, Result};
+use std::io::{stdout, Result};
 
 #[derive(Copy, Clone)]
 pub struct Symbol {
@@ -47,7 +47,7 @@ impl Symbol {
 impl Drawable for Symbol {
   fn draw(&self) -> Result<()> {
     execute!(
-      io::stdout(),
+      stdout(),
       MoveTo(self.pos.x, self.pos.y),
       Print(self.ch.with(self.color))
     )
@@ -78,7 +78,7 @@ impl Label {
 impl Drawable for Label {
   fn draw(&self) -> Result<()> {
     execute!(
-      io::stdout(),
+      stdout(),
       MoveTo::from(self.pos),
       Print(&self.message)
     )
@@ -101,7 +101,7 @@ impl Drawable for PopupMessage {
     let char_count = self.message.chars().count();
 
     execute!(
-      io::stdout(),
+      stdout(),
       MoveTo::from(self.origin),
       Print(format!(
         "╔{:═<1$}╗", "",

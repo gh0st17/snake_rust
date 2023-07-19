@@ -24,21 +24,22 @@ pub struct StaticUI {
 
 impl StaticUI {
   pub fn new(field_size: Size) -> Self {
+    let x = field_size.width + 5;
     Self {
       field_size,
       static_labels: vec![
         Label::new(
-          Pos::from((field_size.width + 5, 1)),
+          Pos::from((x, 1)),
           "Очки:".to_string()
             .with(Cyan)
         ),
         Label::new(
-          Pos::from((field_size.width + 5, 2)),
+          Pos::from((x, 2)),
           "Длина змеи:".to_string()
             .with(Cyan)
         ),
         Label::new(
-          Pos::from((field_size.width + 5, 3)),
+          Pos::from((x, 3)),
           "Время:".to_string()
             .with(Cyan)
         )
@@ -94,15 +95,17 @@ impl StaticUI {
       self.field_size.to_string().as_str()
     )?;
 
+    let x = self.field_size.width + 4;
+
     self.print_frame(
-      Pos::from((self.field_size.add_width(4).width, 0)),
+      Pos::from((x, 0)),
       Size::from((20, 3)),
       "Статистика"
     )?;
 
     let terminal_size = terminal::size()?;
     self.print_frame(
-      Pos::from((self.field_size.add_width(4).width, 5)),
+      Pos::from((x, 5)),
       Size::from((terminal_size.0 - self.field_size.width - 6, 7)),
       "Инструкция"
     )
@@ -113,32 +116,31 @@ impl StaticUI {
     let green_appl = get_food_with_type(FoodType::GreenApple);
     let gold_appl  = get_food_with_type(FoodType::GoldApple);
     let brick      = get_food_with_type(FoodType::Brick);
+    let x = field_size.width + 5;
 
     execute!(
       io::stdout(),
-      MoveTo(field_size.width + 5, 6),
+      MoveTo(x, 6),
       Print("Клавиши для перемещения - ".with(Cyan)),
       Print("WASD".with(Magenta).bold()),
-      Print(" (англ. раскладка)".with(Cyan)),
-      MoveTo(field_size.width + 5, 7),
-      Print("или ".with(Cyan)),
+      Print(" или ".with(Cyan)),
       Print("стрелки".with(Magenta)),
       Print(". ".with(Cyan)),
+      MoveTo(x, 7),
       Print("B".with(Magenta).bold()),
       Print(" - переключает режим ускорения.".with(Cyan)),
-      MoveTo(field_size.width + 5, 8),
+      MoveTo(x, 8),
       Print("P".with(Magenta).bold()),
       Print(" - пауза. ".with(Cyan)),
       Print("ESC".with(Magenta).bold()),
       Print(" для выхода. ".with(Cyan)),
-      MoveTo(field_size.width + 5, 10),
+      MoveTo(x, 10),
+      Print("Яблоки ".with(Cyan)),
       Print(format!(
-        "{} {} {} {} {} {} {} {}",
-          "Зеленые и".with(Cyan),
+        "{} {} {} {} {} {}",
           green_appl.get_symbol(),
-          "золотые".with(Cyan),
           gold_appl.get_symbol(),
-          "яблоки добавляют".with(Cyan),
+          "различных цветов добавляют".with(Cyan),
           green_appl.get_value()
             .to_string()
             .with(green_appl.get_symbol().color),
@@ -147,11 +149,11 @@ impl StaticUI {
             .to_string()
             .with(gold_appl.get_symbol().color)
         )),
-      MoveTo(field_size.width + 5, 11),
+      MoveTo(x, 11),
       Print(
         "очков соответственно. Игра заканчивается когда"
         .with(Cyan)),
-      MoveTo(field_size.width + 5, 12),
+      MoveTo(x, 12),
       Print("Змея".with(DarkGreen)),
       Print(" ест саму себя или кирпич ".with(Cyan)),
       Print(brick.get_symbol()),
