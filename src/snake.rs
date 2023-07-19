@@ -70,8 +70,8 @@ impl Snake {
   pub fn new(field_size: Size, dir: Direction) -> Snake {
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    let x = rng.gen_range(0..=field_size.width);
-    let y = rng.gen_range(0..=field_size.height);
+    let x = rng.gen_range(0..field_size.width);
+    let y = rng.gen_range(0..field_size.height);
 
     Snake {
       parts: vec![
