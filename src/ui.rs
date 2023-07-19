@@ -13,7 +13,7 @@ use ui_items::{
 use crate::error::{*, self};
 
 use std::{
-  io::{self, Result},
+  io::{Result, stdout},
   thread::sleep,
   time::Duration
 };
@@ -21,7 +21,7 @@ use std::{
 use crossterm::{
   terminal::{*, self},
   cursor,
-  style::{self, Color::*, Stylize},
+  style::{Color::*, Stylize},
   execute
 };
 
@@ -52,7 +52,7 @@ impl UI {
     }
     
     execute!(
-      io::stdout(),
+      stdout(),
       terminal::Clear(ClearType::All),
       cursor::Hide
     )?;
@@ -134,27 +134,22 @@ impl UI {
     self.time.draw()
   }
 
-  pub fn draw<D: Drawable>(&self, drawable: &D) -> Result<()> {
+  pub fn draw<D>(&self, drawable: &D) -> Result<()>
+  where D: Drawable, {
     drawable.draw()
   }
 
-  pub fn draw_vec<D: Drawable>(&self, drawables: &Vec<D>) -> Result<()> {
+  pub fn draw_vec<D>(&self, drawables: &Vec<D>) -> Result<()>
+  where D: Drawable, {
     for drawable in drawables {
       drawable.draw()?;
     }
 
     Ok(())
   }
-}
 
-impl Drop for UI {
-  fn drop(&mut self) {
-    execute!(
-      io::stdout(),
-      Clear(ClearType::All),
-      cursor::Show,
-      style::ResetColor
-    ).unwrap();
+  pub fn disable_raw_mode(&self) {
+    execute!(stdout(), cursor::Show).unwrap();
     disable_raw_mode()
       .expect("Could not disable raw mode");
   }

@@ -15,7 +15,5 @@ fn main() {
     }
   };
 
-  let mut game = Game::new(ui);
-
-  game.run();
+  Game::new(ui).run();
 }

@@ -7,7 +7,7 @@ use crate::ui::{
 };
 
 #[derive(Copy, Clone)]
-pub enum Direction { UP, DOWN, LEFT, RIGHT }
+pub enum Direction { Up, Down, Left, Right }
 
 #[derive(Copy, Clone)]
 pub struct SnakePart {
@@ -33,10 +33,10 @@ impl SnakePart {
 
   pub fn update(&mut self, dir: Direction, max_size: Size) {
     match dir {
-      Direction::UP    => self.symbol.pos.y -= 1,
-      Direction::DOWN  => self.symbol.pos.y += 1,
-      Direction::LEFT  => self.symbol.pos.x -= 1,
-      Direction::RIGHT => self.symbol.pos.x += 1
+      Direction::Up    => self.symbol.pos.y -= 1,
+      Direction::Down  => self.symbol.pos.y += 1,
+      Direction::Left  => self.symbol.pos.x -= 1,
+      Direction::Right => self.symbol.pos.x += 1
     }
 
     if self.symbol.pos.x == 1 {
@@ -67,16 +67,21 @@ pub struct Snake {
 }
 
 impl Snake {
-  pub fn new() -> Snake {
+  pub fn new(field_size: Size, dir: Direction) -> Snake {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    let x = rng.gen_range(0..=field_size.width);
+    let y = rng.gen_range(0..=field_size.height);
+
     Snake {
       parts: vec![
         SnakePart::new(
-          Symbol::new(Pos::from((3, 1)))
+          Symbol::new(Pos::from((x + 2, y + 1)))
             .ch('◇')
             .color(Green)
           )
         ],
-      dir: Direction::RIGHT
+      dir
     }
   }
 
@@ -101,20 +106,20 @@ impl Snake {
 
   pub fn set_direction(&mut self, dir: Direction) {
     if !(
-          matches!(self.dir, Direction::LEFT) &&
-          matches!(dir, Direction::RIGHT)
+          matches!(self.dir, Direction::Left) &&
+          matches!(dir, Direction::Right)
         ) && 
        !(
-          matches!(self.dir, Direction::RIGHT) &&
-          matches!(dir, Direction::LEFT)
+          matches!(self.dir, Direction::Right) &&
+          matches!(dir, Direction::Left)
        ) &&
        !(
-          matches!(self.dir, Direction::UP) &&
-          matches!(dir, Direction::DOWN)
+          matches!(self.dir, Direction::Up) &&
+          matches!(dir, Direction::Down)
        ) && 
        !(
-          matches!(self.dir, Direction::DOWN) &&
-          matches!(dir, Direction::UP)
+          matches!(self.dir, Direction::Down) &&
+          matches!(dir, Direction::Up)
        ) {
         self.dir = dir;
        }

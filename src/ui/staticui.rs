@@ -108,7 +108,7 @@ impl StaticUI {
     )
   }
 
-  pub fn print_help(&self) -> Result<()> {
+  fn print_help(&self) -> Result<()> {
     let field_size = &self.field_size;
     let green_appl = get_food_with_type(FoodType::GreenApple);
     let gold_appl  = get_food_with_type(FoodType::GoldApple);

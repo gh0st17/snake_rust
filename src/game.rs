@@ -1,3 +1,7 @@
+mod game_action;
+
+use game_action::*;
+
 use crate::snake::{
   Snake, Direction
 };
@@ -25,7 +29,6 @@ use std::{
 use atomic::Atomic;
 
 use crossterm::{
-  event::*,
   terminal,
   style::Color::*
 };
@@ -45,13 +48,23 @@ pub struct Game {
 
 impl Game {
   pub fn new(ui: UI) -> Self {
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
+    let dir = match rng.gen_range(0..4) {
+      0 => Direction::Up,
+      1 => Direction::Down,
+      2 => Direction::Left,
+      3 => Direction::Right,
+      _ => Direction::Up,
+    };
+
     Game {
-      barrier: Arc::new(Barrier::new(2)),
+      barrier: Arc::new(Barrier::new(3)),
       is_over: Arc::new(AtomicBool::new(false)),
       pause: Arc::new(AtomicBool::new(false)),
       boost: Arc::new(AtomicBool::new(false)),
       score: 0,
-      dir: Arc::new(Atomic::new(Direction::RIGHT)),
+      dir: Arc::new(Atomic::new(dir)),
       field_size: ui.field_size,
       ui: Arc::new(Mutex::new(ui)),
       terminal_size: Size::from(terminal::size().unwrap())
@@ -74,6 +87,7 @@ impl Game {
     }
 
     self.barrier.wait();
+    self.ui.lock().unwrap().disable_raw_mode();
   }
 
   fn time_update(&mut self) -> Result<()> {
@@ -107,11 +121,14 @@ impl Game {
   }
 
   fn snake_update(&mut self) -> Result<()> {
+    let barrier = self.barrier.clone();
     let stop_bool = self.is_over.clone();
     let pause = self.pause.clone();
     let boost = self.boost.clone();
     let dir = self.dir.clone();
-    let mut snake = Snake::new();
+    let mut snake = Snake::new(
+      self.field_size, dir.load(Ordering::Acquire)
+    );
     let ui = self.ui.clone();
     let field_size = self.field_size;
     
@@ -128,7 +145,7 @@ impl Game {
       let mut _boost = boost.load(Ordering::Acquire);
 
       let mut apple = generate_food(
-        &field_size, true, &Pos::from((0, 0))
+        &field_size, true, &snake.get_head_pos()
       );
       
       let mut bricks: Vec<Box<dyn Food>> = Vec::new();
@@ -137,7 +154,7 @@ impl Game {
 
       for _ in 0..density {
         bricks.push(generate_food(
-          &field_size, false, &Pos::from((0, 0))
+          &field_size, false, &snake.get_head_pos()
         ));
       }
 
@@ -169,7 +186,7 @@ impl Game {
         }
 
         if snake.check_pos(&apple.get_pos()) {
-          local_self.food_generator(
+          local_self.food_update(
             &mut apple, &mut bricks, &mut snake, &last_pos
           )?;
         }
@@ -209,6 +226,7 @@ impl Game {
         }
       }
 
+      barrier.wait();
       Ok(())
     });
 
@@ -221,36 +239,37 @@ impl Game {
     let boost = self.boost.clone();
     let ui = self.ui.clone();
     let dir = self.dir.clone();
+    let key_controller = KeyController::new();
 
     let _ = thread::spawn(move || -> Result<()> {
       loop {
-        let event = read()?;
+        let action = key_controller.fetch_action()?;
 
         if !pause.load(Ordering::Acquire) {
-          if event == Event::Key(KeyCode::Char('w').into()) || 
-            event == Event::Key(KeyCode::Up.into()) {
-            dir.store(Direction::UP, Ordering::Release);
-          }
-          if event == Event::Key(KeyCode::Char('s').into()) || 
-            event == Event::Key(KeyCode::Down.into()) {
-            dir.store(Direction::DOWN, Ordering::Release);
-          }
-          if event == Event::Key(KeyCode::Char('a').into()) || 
-            event == Event::Key(KeyCode::Left.into()) {
-            dir.store(Direction::LEFT, Ordering::Release);
-          }
-          if event == Event::Key(KeyCode::Char('d').into()) || 
-            event == Event::Key(KeyCode::Right.into()) {
-            dir.store(Direction::RIGHT, Ordering::Release);
-          }
+          match action {
+            KeyAction::None => (),
+            KeyAction::MoveUp => dir.store(Direction::Up, Ordering::Release),
+            KeyAction::MoveDown => dir.store(Direction::Down, Ordering::Release),
+            KeyAction::MoveLeft => dir.store(Direction::Left, Ordering::Release),
+            KeyAction::MoveRight => dir.store(Direction::Right, Ordering::Release),
+            KeyAction::Boost => {
+              let _boost = boost.load(Ordering::Acquire);
+              boost.store(!_boost, Ordering::Release);
+            }
+            KeyAction::Pause => (),
+            KeyAction::Exit => {
+              ui.lock().unwrap()
+              .print_popup_message(
+                "Прерывание...".to_string(), true
+              )?;
 
-          if event == Event::Key(KeyCode::Char('b').into()) {
-            let _boost = boost.load(Ordering::Acquire);
-            boost.store(!_boost, Ordering::Release);
+            stop_bool.store(true, Ordering::Release);
+            break;
+            }
           }
         }
 
-        if event == Event::Key(KeyCode::Char('p').into()) {
+        if let KeyAction::Pause = action {
           let _pause = pause.load(Ordering::Acquire);
           pause.store(!_pause, Ordering::Release);
           let _ui = ui.lock().unwrap();
@@ -264,16 +283,6 @@ impl Game {
             _ui.print_static()?;
           }
         }
-
-        if event == Event::Key(KeyCode::Esc.into()) {
-          ui.lock().unwrap()
-            .print_popup_message(
-              "Прерывание...".to_string(), true
-            )?;
-
-          stop_bool.store(true, Ordering::Release);
-          break;
-        }
       }
 
       Ok(())
@@ -282,7 +291,7 @@ impl Game {
     Ok(())
   }
 
-  fn food_generator(&mut self, apple: &mut Box<dyn Food>,
+  fn food_update(&mut self, apple: &mut Box<dyn Food>,
       bricks: &mut Vec<Box<dyn Food>>,
       snake: &mut Snake, last_pos: &Pos) -> Result<()> {
     
