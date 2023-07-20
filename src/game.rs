@@ -327,7 +327,7 @@ impl Game {
         break;
       }
     }
-    
+
     for i in 0..bricks.len() {
       ui.draw(&Symbol::new(bricks[i].get_pos()))?;
 
