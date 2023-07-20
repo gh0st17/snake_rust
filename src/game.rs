@@ -78,35 +78,23 @@ impl Game {
   }
 
   pub fn run(&mut self) {
-    let shared_self = self.clone();
-    let _ = thread::spawn(move || -> Result<()> {
-      let local_self = &mut shared_self.clone();
-      local_self.time_update()
-    });
+    let threads = vec![
+      Self::time_update,
+      Self::snake_update,
+      Self::collision_update,
+      Self::fetch_event,
+      Self::terminal_size_checker
+    ];
 
-    let shared_self = self.clone();
-    let _ = thread::spawn(move || -> Result<()> {
-      let local_self = &mut shared_self.clone();
-      local_self.snake_update()
-    });
+    for thread in threads {
+      let shared_self = self.clone();
 
-    let shared_self = self.clone();
-    let _ = thread::spawn(move || -> Result<()> {
-      let local_self = &mut shared_self.clone();
-      local_self.collision_update()
-    });
+      let _ = thread::spawn(move || -> Result<()> {
+        let local_self = &mut shared_self.clone();
 
-    let shared_self = self.clone();
-    let _ = thread::spawn(move || -> Result<()> {
-      let local_self = &mut shared_self.clone();
-      local_self.fetch_event()
-    });
-
-    let shared_self = self.clone();
-    let _ = thread::spawn(move || -> Result<()> {
-      let local_self = &mut shared_self.clone();
-      local_self.terminal_size_checker()
-    });
+        thread(local_self)
+      });
+    }
 
     self.barrier.wait();
     self.ui.lock().unwrap().disable_raw_mode();
