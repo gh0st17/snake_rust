@@ -1,6 +1,6 @@
 mod game_action;
 
-use game_action::*;
+use game_action::{KeyAction, KeyController};
 
 use crate::snake::{
   Snake, Direction
@@ -40,6 +40,7 @@ pub struct Game {
   stop_bool: Arc<AtomicBool>,
   pause: Arc<AtomicBool>,
   boost: Arc<AtomicBool>,
+  is_collide: Arc<AtomicBool>,
   score: u16,
   ui: Arc<Mutex<UI>>,
   snake: Arc<Mutex<Snake>>,
@@ -65,6 +66,7 @@ impl Game {
       stop_bool: Arc::new(AtomicBool::new(false)),
       pause: Arc::new(AtomicBool::new(false)),
       boost: Arc::new(AtomicBool::new(false)),
+      is_collide: Arc::new(AtomicBool::new(false)),
       score: 0,
       field_size: ui.field_size,
       snake: Arc::new(Mutex::new(Snake::new(ui.field_size, dir))),
@@ -127,6 +129,7 @@ impl Game {
 
   fn snake_update(&mut self) -> Result<()> {
     let stop_bool = self.stop_bool.clone();
+    let is_collide = self.is_collide.clone();
     let barrier = self.barrier.clone();
     let snake = self.snake.clone();
     let ui = self.ui.clone();
@@ -166,21 +169,23 @@ impl Game {
           None => ()
         };
 
-        last_pos.store(
-          snake
-            .lock().unwrap()
-            .update(field_size),
-          Ordering::Release
-        );
-        ui.lock().unwrap().draw(
-          &Symbol::new(
-            last_pos.load(Ordering::Acquire)
-          )
-        )?;
-        ui.lock().unwrap().draw::<Snake>(
-          &snake
-            .lock().unwrap()
-        )?;
+        if !is_collide.load(Ordering::Acquire) {
+          last_pos.store(
+            snake
+              .lock().unwrap()
+              .update(field_size),
+            Ordering::Release
+          );
+          ui.lock().unwrap().draw(
+            &Symbol::new(
+              last_pos.load(Ordering::Acquire)
+            )
+          )?;
+          ui.lock().unwrap().draw::<Snake>(
+            &snake
+              .lock().unwrap()
+          )?;
+        }
 
         if stop_bool.load(Ordering::Acquire) {
           break;
@@ -195,8 +200,8 @@ impl Game {
   }
 
   fn collision_update(&mut self) -> Result<()> {
-    let barrier = self.barrier.clone();
     let stop_bool = self.stop_bool.clone();
+    let barrier = self.barrier.clone();
     let snake = self.snake.clone();
     let ui = self.ui.clone();
     let field_size = self.field_size;
@@ -256,6 +261,7 @@ impl Game {
         .print_popup_message("Сам себя съел!")?;
 
       self.stop_bool.store(true, Ordering::Release);
+      self.is_collide.store(true, Ordering::Release);
       sleep(Duration::from_secs(3));
     }
 
@@ -269,6 +275,7 @@ impl Game {
           .print_popup_message("Съел кирпич!")?;
 
         self.stop_bool.store(true, Ordering::Release);
+        self.is_collide.store(true, Ordering::Release);
         sleep(Duration::from_secs(3));
       }
     }
@@ -340,14 +347,14 @@ impl Game {
 
     ui.print_stats(
       &self.score,
-      &(
-        self.snake
+      &(self.snake
           .lock().unwrap()
-          .get_parts().len() as u16
-      )
+          .get_parts().len() as u16)
     )?;
 
-    self.snake.lock().unwrap().add_part(self.last_pos.load(Ordering::Acquire));
+    self.snake
+      .lock().unwrap()
+      .add_part(self.last_pos.load(Ordering::Acquire));
     
     let snake_pos = self.snake
       .lock().unwrap()
