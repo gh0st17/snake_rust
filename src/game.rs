@@ -327,7 +327,7 @@ impl Game {
         break;
       }
     }
-
+    
     for i in 0..bricks.len() {
       ui.draw(&Symbol::new(bricks[i].get_pos()))?;
 
@@ -352,10 +352,10 @@ impl Game {
         }
         break;
       }
-
-      ui.draw(&bricks[i])?;
-      ui.draw(apple)?;
     }
+
+    ui.draw_vec(&bricks)?;
+    ui.draw(apple)?;
 
     Ok(())
   }
