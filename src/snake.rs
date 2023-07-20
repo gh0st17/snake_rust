@@ -6,8 +6,37 @@ use crate::ui::{
   ui_items::Symbol
 };
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum Direction { Up, Down, Left, Right }
+
+impl Direction {
+  pub fn is_opposite(&self, other: &Self) -> bool {
+    match self {
+      Direction::Up => {
+        if let Direction::Down = other {
+          return true;
+        }
+      },
+      Direction::Down => {
+        if let Direction::Up = other {
+          return true;
+        }
+      },
+      Direction::Left => {
+        if let Direction::Right = other {
+          return true;
+        }
+      },
+      Direction::Right => {
+        if let Direction::Left = other {
+          return true;
+        }
+      }
+    }
+
+    false
+  }
+}
 
 #[derive(Copy, Clone)]
 pub struct SnakePart {
@@ -63,7 +92,7 @@ impl Drawable for SnakePart {
 
 pub struct Snake {
   parts: Vec<SnakePart>,
-  dir: Direction
+  pub dir: Direction
 }
 
 impl Snake {
@@ -105,24 +134,9 @@ impl Snake {
   }
 
   pub fn set_direction(&mut self, dir: Direction) {
-    if !(
-          matches!(self.dir, Direction::Left) &&
-          matches!(dir, Direction::Right)
-        ) && 
-       !(
-          matches!(self.dir, Direction::Right) &&
-          matches!(dir, Direction::Left)
-       ) &&
-       !(
-          matches!(self.dir, Direction::Up) &&
-          matches!(dir, Direction::Down)
-       ) && 
-       !(
-          matches!(self.dir, Direction::Down) &&
-          matches!(dir, Direction::Up)
-       ) {
-        self.dir = dir;
-       }
+    if !self.dir.is_opposite(&dir) {
+      self.dir = dir;
+    }
   }
 
   pub fn add_part(&mut self, pos: Pos) {
