@@ -180,13 +180,7 @@ impl Game {
   }
 
   fn collision_update(&mut self) -> Result<()> {
-    let stop_bool = self.stop_bool.clone();
-    let barrier = self.barrier.clone();
-    let snake = self.snake.clone();
-    let ui = self.ui.clone();
-    let field_size = self.field_size;
-    
-    let s_length = snake.lock().unwrap().get_parts().len() as u16 - 1;
+    let s_length = self.snake.lock().unwrap().get_parts().len() as u16 - 1;
 
     self.ui
       .lock()
@@ -194,26 +188,26 @@ impl Game {
       .print_stats(&self.score, &s_length)?;
 
     let mut apple = generate_food(
-      &field_size, true, &snake.lock().unwrap().get_head_pos()
+      &self.field_size, true, &self.snake.lock().unwrap().get_head_pos()
     );
     
     let mut bricks: Vec<Box<dyn Food>> = Vec::new();
-    let density = field_size.width as u64 * 
-      field_size.height as u64 / 100;
+    let density = self.field_size.width as u64 * 
+      self.field_size.height as u64 / 100;
 
     for _ in 0..density {
       bricks.push(generate_food(
-        &field_size, false, &snake.lock().unwrap().get_head_pos()
+        &self.field_size, false, &self.snake.lock().unwrap().get_head_pos()
       ));
     }
 
-    ui.lock().unwrap().draw(&apple)?;
-    ui.lock().unwrap().draw::<Snake>(&snake.lock().unwrap())?;
-    ui.lock().unwrap().draw_vec(&bricks)?;
+    self.ui.lock().unwrap().draw(&apple)?;
+    self.ui.lock().unwrap().draw::<Snake>(&self.snake.lock().unwrap())?;
+    self.ui.lock().unwrap().draw_vec(&bricks)?;
 
     loop {
       self.collision_check(&mut apple, &mut bricks)?;
-      if stop_bool.load(Ordering::Acquire) {
+      if self.stop_bool.load(Ordering::Acquire) {
         break;
       }
       else {
@@ -221,7 +215,7 @@ impl Game {
       }
     }
 
-    barrier.wait();
+    self.barrier.wait();
     Ok(())
   }
 
