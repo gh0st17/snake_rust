@@ -12,11 +12,7 @@ use ui_items::{
 
 use crate::error::{*, self};
 
-use std::{
-  io::{Result, stdout},
-  thread::sleep,
-  time::Duration
-};
+use std::io::{Result, stdout};
 
 use crossterm::{
   terminal::{*, self},
@@ -99,17 +95,11 @@ impl UI {
     Ok(())
   }
 
-  pub fn print_popup_message(&self, message: String, is_delayed: bool) -> Result<()> {
+  pub fn print_popup_message(&self, message: &str) -> Result<()> {
     let mut x = terminal::size()?.0 - 14;
     x -= (message.chars().count() as u16 / 2) + 2;
     
-    PopupMessage::new(Pos::from((x, 1)), message).draw()?;
-
-    if is_delayed {
-      sleep(Duration::from_secs(3));
-    }
-
-    Ok(())
+    PopupMessage::new(Pos::from((x, 1)), message.to_string()).draw()
   }
 
   pub fn print_stats(&mut self, score: &u16, s_length: &u16) -> Result<()> {

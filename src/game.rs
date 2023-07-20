@@ -16,8 +16,8 @@ use crate::ui::{
   ui_items::Symbol
 };
 
-use std::collections::VecDeque;
 use std::{
+  collections::VecDeque,
   io::Result,
   thread::{sleep, self},
   time::Duration,
@@ -253,9 +253,10 @@ impl Game {
 
     if self.snake.lock().unwrap().check_self_eaten() {
       self.ui.lock().unwrap()
-        .print_popup_message("Сам себя съел!".to_string(), true)?;
+        .print_popup_message("Сам себя съел!")?;
 
       self.stop_bool.store(true, Ordering::Release);
+      sleep(Duration::from_secs(3));
     }
 
     if self.snake.lock().unwrap().check_pos(&apple.get_pos()) {
@@ -265,11 +266,10 @@ impl Game {
     for brick in bricks {
       if self.snake.lock().unwrap().check_pos(&brick.get_pos()) {
         self.ui.lock().unwrap()
-          .print_popup_message(
-            "Съел кирпич!".to_string(), true
-          )?;
+          .print_popup_message("Съел кирпич!")?;
 
         self.stop_bool.store(true, Ordering::Release);
+        sleep(Duration::from_secs(3));
       }
     }
 
@@ -302,11 +302,10 @@ impl Game {
             KeyAction::Pause => (),
             KeyAction::Exit => {
               ui.lock().unwrap()
-              .print_popup_message(
-                "Прерывание...".to_string(), true
-              )?;
+              .print_popup_message("Прерывание...")?;
 
               stop_bool.store(true, Ordering::Release);
+              sleep(Duration::from_secs(3));
               break;
             }
           }
@@ -318,9 +317,7 @@ impl Game {
           let _ui = ui.lock().unwrap();
 
           if !_pause {
-            _ui.print_popup_message(
-              "Пауза".to_string(), false
-            )?;
+            _ui.print_popup_message("Пауза")?;
           }
           else {
             _ui.clear_popup_message()?;
