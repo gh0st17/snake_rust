@@ -40,8 +40,9 @@ pub struct Game {
   pause: Arc<AtomicBool>,
   boost: Arc<AtomicBool>,
   score: u16,
-  dir: Arc<Atomic<Direction>>,
   ui: Arc<Mutex<UI>>,
+  snake: Arc<Mutex<Snake>>,
+  last_pos: Arc<Atomic<Pos>>,
   field_size: Size,
   terminal_size: Size
 }
@@ -63,8 +64,9 @@ impl Game {
       pause: Arc::new(AtomicBool::new(false)),
       boost: Arc::new(AtomicBool::new(false)),
       score: 0,
-      dir: Arc::new(Atomic::new(dir)),
       field_size: ui.field_size,
+      snake: Arc::new(Mutex::new(Snake::new(ui.field_size, dir))),
+      last_pos: Arc::new(Atomic::new(Pos::from((0, 0)))),
       ui: Arc::new(Mutex::new(ui)),
       terminal_size: Size::from(terminal::size().unwrap())
     }
@@ -74,6 +76,7 @@ impl Game {
     let threads = vec![
       self.time_update(),
       self.snake_update(),
+      self.collision_update(),
       self.fetch_event(),
       self.terminal_size_checker()
     ];
@@ -120,18 +123,63 @@ impl Game {
   }
 
   fn snake_update(&mut self) -> Result<()> {
-    let barrier = self.barrier.clone();
-    let stop_bool = self.is_over.clone();
-    let pause = self.pause.clone();
-    let boost = self.boost.clone();
-    let dir = self.dir.clone();
-    let mut snake = Snake::new(
-      self.field_size, dir.load(Ordering::Acquire)
-    );
+    let snake = self.snake.clone();
     let ui = self.ui.clone();
     let field_size = self.field_size;
+    let last_pos = self.last_pos.clone();
+    let pause = self.pause.clone();
+    let boost = self.boost.clone();
+    let mut _boost = false;
+    let stop_bool = self.is_over.clone();
+
+    let _ = thread::spawn(move || -> Result<()> {
+      loop {
+        if pause.load(Ordering::Acquire) {
+          sleep(Duration::from_millis(100));
+          continue;
+        }
+          
+        if boost.load(Ordering::Acquire) {
+          sleep(Duration::from_millis(130));
+
+          if !_boost {
+            _boost = true;
+            snake.lock().unwrap().set_head_color(Cyan);
+          }
+        }
+        else {
+          sleep(Duration::from_millis(200));
+
+          if _boost {
+            _boost = false;
+            snake.lock().unwrap().set_head_color(Green);
+          }
+        }
+
+        last_pos.store(snake.lock().unwrap().update(field_size), Ordering::Release);
+        ui.lock().unwrap().draw(&Symbol::new(last_pos.load(Ordering::Acquire)))?;
+        ui.lock().unwrap().draw::<Snake>(&snake.lock().unwrap())?;
+
+        if stop_bool.load(Ordering::Acquire) {
+          break;
+        }
+      }
+
+      Ok(())
+    });
+
+    Ok(())
+  }
+
+  fn collision_update(&mut self) -> Result<()> {
+    let barrier = self.barrier.clone();
+    let stop_bool = self.is_over.clone();
+    let snake = self.snake.clone();
+    let ui = self.ui.clone();
+    let field_size = self.field_size;
+    let last_pos = self.last_pos.clone();
     
-    let s_length = snake.get_parts().len() as u16 - 1;
+    let s_length = snake.lock().unwrap().get_parts().len() as u16 - 1;
 
     self.ui
       .lock()
@@ -141,10 +189,8 @@ impl Game {
     let mut shared_self = self.clone();
 
     let _ = thread::spawn(move || -> Result<()> {
-      let mut _boost = boost.load(Ordering::Acquire);
-
       let mut apple = generate_food(
-        &field_size, true, &snake.get_head_pos()
+        &field_size, true, &snake.lock().unwrap().get_head_pos()
       );
       
       let mut bricks: Vec<Box<dyn Food>> = Vec::new();
@@ -153,30 +199,19 @@ impl Game {
 
       for _ in 0..density {
         bricks.push(generate_food(
-          &field_size, false, &snake.get_head_pos()
+          &field_size, false, &snake.lock().unwrap().get_head_pos()
         ));
       }
 
       let local_self = &mut shared_self;
 
       ui.lock().unwrap().draw(&apple)?;
-      ui.lock().unwrap().draw(&snake)?;
+      ui.lock().unwrap().draw::<Snake>(&snake.lock().unwrap())?;
       ui.lock().unwrap().draw_vec(&bricks)?;
 
       'stop:
       loop {
-        if pause.load(Ordering::Acquire) {
-          sleep(Duration::from_millis(100));
-          continue;
-        }
-
-        snake.set_direction(dir.load(Ordering::Acquire));
-        let last_pos = snake.update(field_size);
-
-        ui.lock().unwrap().draw(&Symbol::new(last_pos))?;
-        ui.lock().unwrap().draw(&snake)?;
-
-        if snake.check_self_eaten() {
+        if snake.lock().unwrap().check_self_eaten() {
           ui.lock().unwrap()
             .print_popup_message("Сам себя съел!".to_string(), true)?;
 
@@ -184,14 +219,14 @@ impl Game {
           break;
         }
 
-        if snake.check_pos(&apple.get_pos()) {
+        if snake.lock().unwrap().check_pos(&apple.get_pos()) {
           local_self.food_update(
-            &mut apple, &mut bricks, &mut snake, &last_pos
+            &mut apple, &mut bricks, snake.clone(), &last_pos.load(Ordering::Acquire)
           )?;
         }
 
         for brick in &bricks {
-          if snake.check_pos(&brick.get_pos()) {
+          if snake.lock().unwrap().check_pos(&brick.get_pos()) {
             ui.lock().unwrap()
               .print_popup_message(
                 "Съел кирпич!".to_string(), true
@@ -206,22 +241,7 @@ impl Game {
           break;
         }
         else {
-          if boost.load(Ordering::Acquire) {
-            sleep(Duration::from_millis(130));
-
-            if !_boost {
-              _boost = true;
-              snake.set_head_color(Cyan);
-            }
-          }
-          else {
-            sleep(Duration::from_millis(200));
-
-            if _boost {
-              _boost = false;
-              snake.set_head_color(Green);
-            }
-          }
+          sleep(Duration::from_millis(50));
         }
       }
 
@@ -237,20 +257,30 @@ impl Game {
     let pause = self.pause.clone();
     let boost = self.boost.clone();
     let ui = self.ui.clone();
-    let dir = self.dir.clone();
+    let snake = self.snake.clone();
     let key_controller = KeyController::new();
+    let fs = self.field_size;
+    let lp = self.last_pos.clone();
+    let mut dir = snake.lock().unwrap().dir;
 
     let _ = thread::spawn(move || -> Result<()> {
+      let snake_update = || -> Result<()> {
+        let last_pos = snake.lock().unwrap().update(fs);
+        ui.lock().unwrap().draw(&Symbol::new(last_pos))?;
+        lp.store(last_pos, Ordering::Release);
+        ui.lock().unwrap().draw::<Snake>(&snake.lock().unwrap())
+      };
+
       loop {
         let action = key_controller.fetch_action()?;
 
         if !pause.load(Ordering::Acquire) {
           match action {
             KeyAction::None => (),
-            KeyAction::MoveUp => dir.store(Direction::Up, Ordering::Release),
-            KeyAction::MoveDown => dir.store(Direction::Down, Ordering::Release),
-            KeyAction::MoveLeft => dir.store(Direction::Left, Ordering::Release),
-            KeyAction::MoveRight => dir.store(Direction::Right, Ordering::Release),
+            KeyAction::MoveUp => dir = Direction::Up,
+            KeyAction::MoveDown => dir = Direction::Down,
+            KeyAction::MoveLeft => dir = Direction::Left,
+            KeyAction::MoveRight => dir = Direction::Right,
             KeyAction::Boost => {
               let _boost = boost.load(Ordering::Acquire);
               boost.store(!_boost, Ordering::Release);
@@ -265,6 +295,12 @@ impl Game {
               stop_bool.store(true, Ordering::Release);
               break;
             }
+          }
+
+          let _dir = snake.lock().unwrap().dir;
+          if dir != _dir && !dir.is_opposite(&_dir) {
+            snake.lock().unwrap().set_direction(dir);
+            snake_update()?;
           }
         }
 
@@ -292,7 +328,7 @@ impl Game {
 
   fn food_update(&mut self, apple: &mut Box<dyn Food>,
       bricks: &mut Vec<Box<dyn Food>>,
-      snake: &mut Snake, last_pos: &Pos) -> Result<()> {
+      snake: Arc<Mutex<Snake>>, last_pos: &Pos) -> Result<()> {
     
     let mut ui = self.ui.lock().unwrap();
 
@@ -300,18 +336,18 @@ impl Game {
 
     ui.print_stats(
       &self.score,
-      &(snake.get_parts().len() as u16)
+      &(snake.lock().unwrap().get_parts().len() as u16)
     )?;
 
-    snake.add_part(*last_pos);
+    snake.lock().unwrap().add_part(*last_pos);
     
-    let snake_pos = snake.get_head_pos();
+    let snake_pos = snake.lock().unwrap().get_head_pos();
     loop {
       *apple = generate_food(
         &self.field_size, true, &snake_pos
       );
 
-      if !snake.check_pos(&apple.get_pos()) {
+      if !snake.lock().unwrap().check_pos(&apple.get_pos()) {
         break;
       }
     }
@@ -325,8 +361,9 @@ impl Game {
           &self.field_size, false, &snake_pos
         );
 
-        if snake.check_pos(&bricks[i].get_pos()) ||
-        apple.get_pos() == bricks[i].get_pos() {
+        if snake.lock().unwrap().check_pos(&bricks[i].get_pos()) ||
+          apple.get_pos() == bricks[i].get_pos() {
+          
           continue;
         }
         
