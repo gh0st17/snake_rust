@@ -156,9 +156,21 @@ impl Game {
           }
         }
 
-        last_pos.store(snake.lock().unwrap().update(field_size), Ordering::Release);
-        ui.lock().unwrap().draw(&Symbol::new(last_pos.load(Ordering::Acquire)))?;
-        ui.lock().unwrap().draw::<Snake>(&snake.lock().unwrap())?;
+        last_pos.store(
+          snake
+            .lock().unwrap()
+            .update(field_size),
+          Ordering::Release
+        );
+        ui.lock().unwrap().draw(
+          &Symbol::new(
+            last_pos.load(Ordering::Acquire)
+          )
+        )?;
+        ui.lock().unwrap().draw::<Snake>(
+          &snake
+            .lock().unwrap()
+        )?;
 
         if stop_bool.load(Ordering::Acquire) {
           break;
@@ -221,7 +233,7 @@ impl Game {
 
         if snake.lock().unwrap().check_pos(&apple.get_pos()) {
           local_self.food_update(
-            &mut apple, &mut bricks, snake.clone(), &last_pos.load(Ordering::Acquire)
+            &mut apple, &mut bricks, &last_pos.load(Ordering::Acquire)
           )?;
         }
 
@@ -327,8 +339,7 @@ impl Game {
   }
 
   fn food_update(&mut self, apple: &mut Box<dyn Food>,
-      bricks: &mut Vec<Box<dyn Food>>,
-      snake: Arc<Mutex<Snake>>, last_pos: &Pos) -> Result<()> {
+      bricks: &mut Vec<Box<dyn Food>>, last_pos: &Pos) -> Result<()> {
     
     let mut ui = self.ui.lock().unwrap();
 
@@ -336,18 +347,28 @@ impl Game {
 
     ui.print_stats(
       &self.score,
-      &(snake.lock().unwrap().get_parts().len() as u16)
+      &(
+        self.snake
+          .lock().unwrap()
+          .get_parts().len() as u16
+      )
     )?;
 
-    snake.lock().unwrap().add_part(*last_pos);
+    self.snake.lock().unwrap().add_part(*last_pos);
     
-    let snake_pos = snake.lock().unwrap().get_head_pos();
+    let snake_pos = self.snake
+      .lock().unwrap()
+      .get_head_pos();
+
     loop {
       *apple = generate_food(
         &self.field_size, true, &snake_pos
       );
 
-      if !snake.lock().unwrap().check_pos(&apple.get_pos()) {
+      if !self.snake
+        .lock().unwrap()
+        .check_pos(&apple.get_pos()) {
+        
         break;
       }
     }
@@ -361,8 +382,10 @@ impl Game {
           &self.field_size, false, &snake_pos
         );
 
-        if snake.lock().unwrap().check_pos(&bricks[i].get_pos()) ||
-          apple.get_pos() == bricks[i].get_pos() {
+        if self.snake
+          .lock().unwrap()
+          .check_pos(&bricks[i].get_pos()) ||
+            apple.get_pos() == bricks[i].get_pos() {
           
           continue;
         }
