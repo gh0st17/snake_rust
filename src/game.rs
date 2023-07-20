@@ -16,6 +16,7 @@ use crate::ui::{
   ui_items::Symbol
 };
 
+use std::collections::VecDeque;
 use std::{
   io::Result,
   thread::{sleep, self},
@@ -42,6 +43,7 @@ pub struct Game {
   score: u16,
   ui: Arc<Mutex<UI>>,
   snake: Arc<Mutex<Snake>>,
+  sequence: Arc<Mutex<VecDeque<Direction>>>,
   last_pos: Arc<Atomic<Pos>>,
   field_size: Size,
   terminal_size: Size
@@ -59,13 +61,14 @@ impl Game {
     };
 
     Game {
-      barrier: Arc::new(Barrier::new(3)),
+      barrier: Arc::new(Barrier::new(4)),
       stop_bool: Arc::new(AtomicBool::new(false)),
       pause: Arc::new(AtomicBool::new(false)),
       boost: Arc::new(AtomicBool::new(false)),
       score: 0,
       field_size: ui.field_size,
       snake: Arc::new(Mutex::new(Snake::new(ui.field_size, dir))),
+      sequence: Arc::new(Mutex::new(VecDeque::new())),
       last_pos: Arc::new(Atomic::new(Pos::from((0, 0)))),
       ui: Arc::new(Mutex::new(ui)),
       terminal_size: Size::from(terminal::size().unwrap())
@@ -123,6 +126,8 @@ impl Game {
   }
 
   fn snake_update(&mut self) -> Result<()> {
+    let stop_bool = self.stop_bool.clone();
+    let barrier = self.barrier.clone();
     let snake = self.snake.clone();
     let ui = self.ui.clone();
     let field_size = self.field_size;
@@ -130,7 +135,7 @@ impl Game {
     let pause = self.pause.clone();
     let boost = self.boost.clone();
     let mut _boost = false;
-    let stop_bool = self.stop_bool.clone();
+    let sequence = self.sequence.clone();
 
     let _ = thread::spawn(move || -> Result<()> {
       loop {
@@ -156,6 +161,11 @@ impl Game {
           }
         }
 
+        match sequence.lock().unwrap().pop_front() {
+          Some(dir) => snake.lock().unwrap().set_direction(dir),
+          None => ()
+        };
+
         last_pos.store(
           snake
             .lock().unwrap()
@@ -177,6 +187,7 @@ impl Game {
         }
       }
 
+      barrier.wait();
       Ok(())
     });
 
@@ -270,30 +281,20 @@ impl Game {
     let pause = self.pause.clone();
     let boost = self.boost.clone();
     let ui = self.ui.clone();
-    let snake = self.snake.clone();
     let key_controller = KeyController::new();
-    let fs = self.field_size;
-    let lp = self.last_pos.clone();
-    let mut dir = snake.lock().unwrap().dir;
+    let sequence = self.sequence.clone();
 
     let _ = thread::spawn(move || -> Result<()> {
-      let snake_update = || -> Result<()> {
-        let last_pos = snake.lock().unwrap().update(fs);
-        ui.lock().unwrap().draw(&Symbol::new(last_pos))?;
-        lp.store(last_pos, Ordering::Release);
-        ui.lock().unwrap().draw::<Snake>(&snake.lock().unwrap())
-      };
-
       loop {
         let action = key_controller.fetch_action()?;
 
         if !pause.load(Ordering::Acquire) {
           match action {
             KeyAction::None => (),
-            KeyAction::MoveUp    => dir = Direction::Up,
-            KeyAction::MoveDown  => dir = Direction::Down,
-            KeyAction::MoveLeft  => dir = Direction::Left,
-            KeyAction::MoveRight => dir = Direction::Right,
+            KeyAction::MoveUp    => sequence.lock().unwrap().push_back(Direction::Up),
+            KeyAction::MoveDown  => sequence.lock().unwrap().push_back(Direction::Down),
+            KeyAction::MoveLeft  => sequence.lock().unwrap().push_back(Direction::Left),
+            KeyAction::MoveRight => sequence.lock().unwrap().push_back(Direction::Right),
             KeyAction::Boost => {
               let _boost = boost.load(Ordering::Acquire);
               boost.store(!_boost, Ordering::Release);
@@ -308,12 +309,6 @@ impl Game {
               stop_bool.store(true, Ordering::Release);
               break;
             }
-          }
-
-          let _dir = snake.lock().unwrap().dir;
-          if dir != _dir && !dir.is_opposite(&_dir) {
-            snake.lock().unwrap().set_direction(dir);
-            snake_update()?;
           }
         }
 
