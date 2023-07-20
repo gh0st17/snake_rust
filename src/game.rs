@@ -78,124 +78,116 @@ impl Game {
   }
 
   pub fn run(&mut self) {
-    let threads = vec![
-      self.time_update(),
-      self.snake_update(),
-      self.collision_update(),
-      self.fetch_event(),
-      self.terminal_size_checker()
-    ];
+    let shared_self = self.clone();
+    let _ = thread::spawn(move || -> Result<()> {
+      let local_self = &mut shared_self.clone();
+      local_self.time_update()
+    });
 
-    for thread in threads {
-      match thread {
-        Ok(_) => (),
-        Err(e) => panic!("{}", e)
-      }
-    }
+    let shared_self = self.clone();
+    let _ = thread::spawn(move || -> Result<()> {
+      let local_self = &mut shared_self.clone();
+      local_self.snake_update()
+    });
+
+    let shared_self = self.clone();
+    let _ = thread::spawn(move || -> Result<()> {
+      let local_self = &mut shared_self.clone();
+      local_self.collision_update()
+    });
+
+    let shared_self = self.clone();
+    let _ = thread::spawn(move || -> Result<()> {
+      let local_self = &mut shared_self.clone();
+      local_self.fetch_event()
+    });
+
+    let shared_self = self.clone();
+    let _ = thread::spawn(move || -> Result<()> {
+      let local_self = &mut shared_self.clone();
+      local_self.terminal_size_checker()
+    });
 
     self.barrier.wait();
     self.ui.lock().unwrap().disable_raw_mode();
   }
 
   fn time_update(&mut self) -> Result<()> {
-    let barrier = self.barrier.clone();
-    let stop_bool = self.stop_bool.clone();
-    let pause = self.pause.clone();
-    let ui = self.ui.clone();
+    let (mut time, delay) = (0.0f64, 0.1f64);
 
-    let _ = thread::spawn(move || -> Result<()> { 
-      let (mut time, delay) = (0.0f64, 0.1f64);
-  
-      loop {
-        if !pause.load(Ordering::Acquire) {
-          ui.lock().unwrap().print_time(&time)?;
-          time += delay;
-        }
-
-        if stop_bool.load(Ordering::Acquire) {
-          break;
-        }
-        else {
-          sleep(Duration::from_millis(100));
-        }
+    loop {
+      if !self.pause.load(Ordering::Acquire) {
+        self.ui.lock().unwrap().print_time(&time)?;
+        time += delay;
       }
 
-      barrier.wait();
-      Ok(())  
-    });
+      if self.stop_bool.load(Ordering::Acquire) {
+        break;
+      }
+      else {
+        sleep(Duration::from_millis(100));
+      }
+    }
 
+    self.barrier.wait();
     Ok(())
   }
 
   fn snake_update(&mut self) -> Result<()> {
-    let stop_bool = self.stop_bool.clone();
-    let is_collide = self.is_collide.clone();
-    let barrier = self.barrier.clone();
-    let snake = self.snake.clone();
-    let ui = self.ui.clone();
-    let field_size = self.field_size;
-    let last_pos = self.last_pos.clone();
-    let pause = self.pause.clone();
-    let boost = self.boost.clone();
     let mut _boost = false;
-    let sequence = self.sequence.clone();
 
-    let _ = thread::spawn(move || -> Result<()> {
-      loop {
-        if pause.load(Ordering::Acquire) {
-          sleep(Duration::from_millis(100));
-          continue;
+    loop {
+      if self.pause.load(Ordering::Acquire) {
+        sleep(Duration::from_millis(100));
+        continue;
+      }
+        
+      if self.boost.load(Ordering::Acquire) {
+        sleep(Duration::from_millis(130));
+
+        if !_boost {
+          _boost = true;
+          self.snake.lock().unwrap().set_head_color(Cyan);
         }
-          
-        if boost.load(Ordering::Acquire) {
-          sleep(Duration::from_millis(130));
+      }
+      else {
+        sleep(Duration::from_millis(200));
 
-          if !_boost {
-            _boost = true;
-            snake.lock().unwrap().set_head_color(Cyan);
-          }
-        }
-        else {
-          sleep(Duration::from_millis(200));
-
-          if _boost {
-            _boost = false;
-            snake.lock().unwrap().set_head_color(Green);
-          }
-        }
-
-        match sequence.lock().unwrap().pop_front() {
-          Some(dir) => snake.lock().unwrap().set_direction(dir),
-          None => ()
-        };
-
-        if !is_collide.load(Ordering::Acquire) {
-          last_pos.store(
-            snake
-              .lock().unwrap()
-              .update(field_size),
-            Ordering::Release
-          );
-          ui.lock().unwrap().draw(
-            &Symbol::new(
-              last_pos.load(Ordering::Acquire)
-            )
-          )?;
-          ui.lock().unwrap().draw::<Snake>(
-            &snake
-              .lock().unwrap()
-          )?;
-        }
-
-        if stop_bool.load(Ordering::Acquire) {
-          break;
+        if _boost {
+          _boost = false;
+          self.snake.lock().unwrap().set_head_color(Green);
         }
       }
 
-      barrier.wait();
-      Ok(())
-    });
+      match self.sequence.lock().unwrap().pop_front() {
+        Some(dir) => self.snake.lock().unwrap().set_direction(dir),
+        None => ()
+      };
 
+      if !self.is_collide.load(Ordering::Acquire) {
+        self.last_pos.store(
+          self.snake
+            .lock().unwrap()
+            .update(self.field_size),
+          Ordering::Release
+        );
+        self.ui.lock().unwrap().draw(
+          &Symbol::new(
+            self.last_pos.load(Ordering::Acquire)
+          )
+        )?;
+        self.ui.lock().unwrap().draw::<Snake>(
+          &self.snake
+            .lock().unwrap()
+        )?;
+      }
+
+      if self.stop_bool.load(Ordering::Acquire) {
+        break;
+      }
+    }
+
+    self.barrier.wait();
     Ok(())
   }
 
@@ -213,43 +205,35 @@ impl Game {
       .unwrap()
       .print_stats(&self.score, &s_length)?;
 
-    let mut shared_self = self.clone();
+    let mut apple = generate_food(
+      &field_size, true, &snake.lock().unwrap().get_head_pos()
+    );
+    
+    let mut bricks: Vec<Box<dyn Food>> = Vec::new();
+    let density = field_size.width as u64 * 
+      field_size.height as u64 / 100;
 
-    let _ = thread::spawn(move || -> Result<()> {
-      let mut apple = generate_food(
-        &field_size, true, &snake.lock().unwrap().get_head_pos()
-      );
-      
-      let mut bricks: Vec<Box<dyn Food>> = Vec::new();
-      let density = field_size.width as u64 * 
-        field_size.height as u64 / 100;
+    for _ in 0..density {
+      bricks.push(generate_food(
+        &field_size, false, &snake.lock().unwrap().get_head_pos()
+      ));
+    }
 
-      for _ in 0..density {
-        bricks.push(generate_food(
-          &field_size, false, &snake.lock().unwrap().get_head_pos()
-        ));
+    ui.lock().unwrap().draw(&apple)?;
+    ui.lock().unwrap().draw::<Snake>(&snake.lock().unwrap())?;
+    ui.lock().unwrap().draw_vec(&bricks)?;
+
+    loop {
+      self.collision_check(&mut apple, &mut bricks)?;
+      if stop_bool.load(Ordering::Acquire) {
+        break;
       }
-
-      let local_self = &mut shared_self;
-
-      ui.lock().unwrap().draw(&apple)?;
-      ui.lock().unwrap().draw::<Snake>(&snake.lock().unwrap())?;
-      ui.lock().unwrap().draw_vec(&bricks)?;
-
-      loop {
-        local_self.collision_check(&mut apple, &mut bricks)?;
-        if stop_bool.load(Ordering::Acquire) {
-          break;
-        }
-        else {
-          sleep(Duration::from_millis(50));
-        }
+      else {
+        sleep(Duration::from_millis(50));
       }
+    }
 
-      barrier.wait();
-      Ok(())
-    });
-
+    barrier.wait();
     Ok(())
   }
 
@@ -284,56 +268,45 @@ impl Game {
   }
 
   fn fetch_event(&mut self) -> Result<()> {
-    let stop_bool = self.stop_bool.clone();
-    let pause = self.pause.clone();
-    let boost = self.boost.clone();
-    let ui = self.ui.clone();
     let key_controller = KeyController::new();
-    let sequence = self.sequence.clone();
+    loop {
+      let action = key_controller.fetch_action()?;
 
-    let _ = thread::spawn(move || -> Result<()> {
-      loop {
-        let action = key_controller.fetch_action()?;
-
-        if !pause.load(Ordering::Acquire) {
-          match action {
-            KeyAction::None => (),
-            KeyAction::MoveUp    => sequence.lock().unwrap().push_back(Direction::Up),
-            KeyAction::MoveDown  => sequence.lock().unwrap().push_back(Direction::Down),
-            KeyAction::MoveLeft  => sequence.lock().unwrap().push_back(Direction::Left),
-            KeyAction::MoveRight => sequence.lock().unwrap().push_back(Direction::Right),
-            KeyAction::Boost => {
-              let _boost = boost.load(Ordering::Acquire);
-              boost.store(!_boost, Ordering::Release);
-            }
-            KeyAction::Pause => (),
-            KeyAction::Exit => {
-              ui.lock().unwrap()
-              .print_popup_message("Прерывание...")?;
-
-              stop_bool.store(true, Ordering::Release);
-              sleep(Duration::from_secs(3));
-              break;
-            }
+      if !self.pause.load(Ordering::Acquire) {
+        match action {
+          KeyAction::None => (),
+          KeyAction::MoveUp    => self.sequence.lock().unwrap().push_back(Direction::Up),
+          KeyAction::MoveDown  => self.sequence.lock().unwrap().push_back(Direction::Down),
+          KeyAction::MoveLeft  => self.sequence.lock().unwrap().push_back(Direction::Left),
+          KeyAction::MoveRight => self.sequence.lock().unwrap().push_back(Direction::Right),
+          KeyAction::Boost => {
+            let _boost = self.boost.load(Ordering::Acquire);
+            self.boost.store(!_boost, Ordering::Release);
           }
-        }
+          KeyAction::Pause => (),
+          KeyAction::Exit => {
+            self.ui.lock().unwrap()
+            .print_popup_message("Прерывание...")?;
 
-        if let KeyAction::Pause = action {
-          let _pause = pause.load(Ordering::Acquire);
-          pause.store(!_pause, Ordering::Release);
-          let _ui = ui.lock().unwrap();
-
-          if !_pause {
-            _ui.print_popup_message("Пауза")?;
-          }
-          else {
-            _ui.clear_popup_message()?;
+            self.stop_bool.store(true, Ordering::Release);
+            break;
           }
         }
       }
 
-      Ok(())
-    });
+      if let KeyAction::Pause = action {
+        let _pause = self.pause.load(Ordering::Acquire);
+        self.pause.store(!_pause, Ordering::Release);
+        let _ui = self.ui.lock().unwrap();
+
+        if !_pause {
+          _ui.print_popup_message("Пауза")?;
+        }
+        else {
+          _ui.clear_popup_message()?;
+        }
+      }
+    }
 
     Ok(())
   }
@@ -406,22 +379,17 @@ impl Game {
   }
 
   fn terminal_size_checker(&mut self) -> Result<()> {
-    let stop_bool = self.stop_bool.clone();
     let terminal_size = self.terminal_size.clone();
 
-    let _ = thread::spawn(move || -> Result<()> {
-      loop {
-        if terminal_size != Size::from(terminal::size()?) {
-          stop_bool.store(true, Ordering::Release);
-          break;
-        }
-        else {
-          sleep(Duration::from_millis(200));
-        }
+    loop {
+      if terminal_size != Size::from(terminal::size()?) {
+        self.stop_bool.store(true, Ordering::Release);
+        break;
       }
-
-      Ok(())
-    });
+      else {
+        sleep(Duration::from_millis(200));
+      }
+    }
 
     Ok(())
   }
