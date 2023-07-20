@@ -289,9 +289,9 @@ impl Game {
         if !pause.load(Ordering::Acquire) {
           match action {
             KeyAction::None => (),
-            KeyAction::MoveUp => dir = Direction::Up,
-            KeyAction::MoveDown => dir = Direction::Down,
-            KeyAction::MoveLeft => dir = Direction::Left,
+            KeyAction::MoveUp    => dir = Direction::Up,
+            KeyAction::MoveDown  => dir = Direction::Down,
+            KeyAction::MoveLeft  => dir = Direction::Left,
             KeyAction::MoveRight => dir = Direction::Right,
             KeyAction::Boost => {
               let _boost = boost.load(Ordering::Acquire);
