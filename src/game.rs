@@ -148,7 +148,9 @@ impl Game {
       }
 
       match self.sequence.lock().unwrap().pop_front() {
-        Some(dir) => self.snake.lock().unwrap().set_direction(dir),
+        Some(dir) => {
+          self.snake.lock().unwrap().set_direction(dir)
+        },
         None => ()
       };
 

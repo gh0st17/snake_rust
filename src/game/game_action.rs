@@ -54,7 +54,8 @@ impl KeyController {
 
     let pause_keys: Vec<KeyEvent> = vec![
       KeyCode::Char('p').into(),
-      KeyCode::Char('з').into()
+      KeyCode::Char('з').into(),
+      KeyCode::Pause.into()
     ];
 
     let exit_key = KeyCode::Esc.into();
