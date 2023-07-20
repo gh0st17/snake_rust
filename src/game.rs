@@ -352,10 +352,10 @@ impl Game {
         }
         break;
       }
-
-      ui.draw(&bricks[i])?;
-      ui.draw(apple)?;
     }
+
+    ui.draw_vec(&bricks)?;
+    ui.draw(apple)?;
 
     Ok(())
   }
