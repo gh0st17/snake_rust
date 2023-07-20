@@ -6,7 +6,7 @@
 Консольная игра Змейка
   
 <p align="center">
-  <img src="https://img.shields.io/github/actions/workflow/status/gh0st17/snake/.github/workflows/rust.yml?style=plastic">
+  <img src="https://img.shields.io/github/actions/workflow/status/gh0st17/snake/.github/workflows/snake_test.yml?style=plastic&label=build%20%26%20test">
   <a href="https://github.com/gh0st17/snake/releases/latest"><img src="https://img.shields.io/github/v/release/gh0st17/snake?style=plastic"></a>
   <img src="https://img.shields.io/badge/license-MIT-blue?style=plastic">
   <img src="https://tokei.rs/b1/github/gh0st17/snake?style=plastic">

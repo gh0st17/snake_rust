@@ -76,3 +76,33 @@ impl fmt::Display for Size {
     write!(f, "{}x{}", self.width, self.height)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::{Pos, Size};
+
+  #[test]
+  fn test_pos_add() {
+    let pos = Pos::from((0, 0));
+    assert_eq!(pos.add_x(10).x, 10);
+    assert_eq!(pos.add_y(10).y, 10);
+  }
+
+  #[test]
+  fn test_pos_overlap() {
+    let origin = Pos::from((5, 5));
+    assert_eq!(origin.is_overlaps(&Pos::from((5, 5))), true);
+    assert_eq!(origin.is_overlaps(&Pos::from((5, 6))), true);
+    assert_eq!(origin.is_overlaps(&Pos::from((5, 4))), true);
+    assert_eq!(origin.is_overlaps(&Pos::from((6, 5))), true);
+    assert_eq!(origin.is_overlaps(&Pos::from((4, 5))), true);
+    assert_eq!(origin.is_overlaps(&Pos::from((6, 54))), false);
+  }
+
+  #[test]
+  fn test_size_add() {
+    let size = Size::from((0, 0));
+    assert_eq!(size.add_width(10).width, 10);
+    assert_eq!(size.add_height(10).height, 10);
+  }
+}
