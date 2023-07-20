@@ -36,7 +36,7 @@ use crossterm::{
 #[derive(Clone)]
 pub struct Game {
   barrier: Arc<Barrier>,
-  is_over: Arc<AtomicBool>,
+  stop_bool: Arc<AtomicBool>,
   pause: Arc<AtomicBool>,
   boost: Arc<AtomicBool>,
   score: u16,
@@ -60,7 +60,7 @@ impl Game {
 
     Game {
       barrier: Arc::new(Barrier::new(3)),
-      is_over: Arc::new(AtomicBool::new(false)),
+      stop_bool: Arc::new(AtomicBool::new(false)),
       pause: Arc::new(AtomicBool::new(false)),
       boost: Arc::new(AtomicBool::new(false)),
       score: 0,
@@ -94,7 +94,7 @@ impl Game {
 
   fn time_update(&mut self) -> Result<()> {
     let barrier = self.barrier.clone();
-    let stop_bool = self.is_over.clone();
+    let stop_bool = self.stop_bool.clone();
     let pause = self.pause.clone();
     let ui = self.ui.clone();
 
@@ -130,7 +130,7 @@ impl Game {
     let pause = self.pause.clone();
     let boost = self.boost.clone();
     let mut _boost = false;
-    let stop_bool = self.is_over.clone();
+    let stop_bool = self.stop_bool.clone();
 
     let _ = thread::spawn(move || -> Result<()> {
       loop {
@@ -185,11 +185,10 @@ impl Game {
 
   fn collision_update(&mut self) -> Result<()> {
     let barrier = self.barrier.clone();
-    let stop_bool = self.is_over.clone();
+    let stop_bool = self.stop_bool.clone();
     let snake = self.snake.clone();
     let ui = self.ui.clone();
     let field_size = self.field_size;
-    let last_pos = self.last_pos.clone();
     
     let s_length = snake.lock().unwrap().get_parts().len() as u16 - 1;
 
@@ -221,34 +220,8 @@ impl Game {
       ui.lock().unwrap().draw::<Snake>(&snake.lock().unwrap())?;
       ui.lock().unwrap().draw_vec(&bricks)?;
 
-      'stop:
       loop {
-        if snake.lock().unwrap().check_self_eaten() {
-          ui.lock().unwrap()
-            .print_popup_message("Сам себя съел!".to_string(), true)?;
-
-          stop_bool.store(true, Ordering::Release);
-          break;
-        }
-
-        if snake.lock().unwrap().check_pos(&apple.get_pos()) {
-          local_self.food_update(
-            &mut apple, &mut bricks, &last_pos.load(Ordering::Acquire)
-          )?;
-        }
-
-        for brick in &bricks {
-          if snake.lock().unwrap().check_pos(&brick.get_pos()) {
-            ui.lock().unwrap()
-              .print_popup_message(
-                "Съел кирпич!".to_string(), true
-              )?;
-
-            stop_bool.store(true, Ordering::Release);
-            break 'stop;
-          }
-        }
-
+        local_self.collision_check(&mut apple, &mut bricks)?;
         if stop_bool.load(Ordering::Acquire) {
           break;
         }
@@ -264,8 +237,36 @@ impl Game {
     Ok(())
   }
 
+  fn collision_check(&mut self, apple: &mut Box<dyn Food>,
+      bricks: &mut Vec<Box<dyn Food>>) -> Result<()> {
+
+    if self.snake.lock().unwrap().check_self_eaten() {
+      self.ui.lock().unwrap()
+        .print_popup_message("Сам себя съел!".to_string(), true)?;
+
+      self.stop_bool.store(true, Ordering::Release);
+    }
+
+    if self.snake.lock().unwrap().check_pos(&apple.get_pos()) {
+      self.food_update(apple, bricks)?;
+    }
+
+    for brick in bricks {
+      if self.snake.lock().unwrap().check_pos(&brick.get_pos()) {
+        self.ui.lock().unwrap()
+          .print_popup_message(
+            "Съел кирпич!".to_string(), true
+          )?;
+
+        self.stop_bool.store(true, Ordering::Release);
+      }
+    }
+
+    Ok(())
+  }
+
   fn fetch_event(&mut self) -> Result<()> {
-    let stop_bool = self.is_over.clone();
+    let stop_bool = self.stop_bool.clone();
     let pause = self.pause.clone();
     let boost = self.boost.clone();
     let ui = self.ui.clone();
@@ -339,7 +340,7 @@ impl Game {
   }
 
   fn food_update(&mut self, apple: &mut Box<dyn Food>,
-      bricks: &mut Vec<Box<dyn Food>>, last_pos: &Pos) -> Result<()> {
+      bricks: &mut Vec<Box<dyn Food>>) -> Result<()> {
     
     let mut ui = self.ui.lock().unwrap();
 
@@ -354,7 +355,7 @@ impl Game {
       )
     )?;
 
-    self.snake.lock().unwrap().add_part(*last_pos);
+    self.snake.lock().unwrap().add_part(self.last_pos.load(Ordering::Acquire));
     
     let snake_pos = self.snake
       .lock().unwrap()
@@ -406,7 +407,7 @@ impl Game {
   }
 
   fn terminal_size_checker(&mut self) -> Result<()> {
-    let stop_bool = self.is_over.clone();
+    let stop_bool = self.stop_bool.clone();
     let terminal_size = self.terminal_size.clone();
 
     let _ = thread::spawn(move || -> Result<()> {
