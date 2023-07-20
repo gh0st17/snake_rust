@@ -68,11 +68,11 @@ impl SnakePart {
       Direction::Right => self.symbol.pos.x += 1
     }
 
-    if self.symbol.pos.x == 1 {
-      self.symbol.pos.x =  max_size.width + 1;
-    }
-    else if self.symbol.pos.x == max_size.width + 2 {
+    if self.symbol.pos.x == max_size.width + 2 {
       self.symbol.pos.x = 2;
+    }
+    else if self.symbol.pos.x == 1 {
+      self.symbol.pos.x = max_size.width + 1;
     }
 
     if self.symbol.pos.y == 0 {
@@ -190,5 +190,67 @@ impl Drawable for Snake {
     }
 
     Ok(())
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::ui::{
+    ui_items::Symbol,
+    dimensions::{Pos, Size}
+  };
+  use super::{Direction, SnakePart};
+
+  #[test]
+  fn test_is_opposite() {
+    assert_eq!(
+      Direction::Up
+        .is_opposite(&Direction::Down), true);
+    assert_eq!(
+      Direction::Down
+        .is_opposite(&Direction::Up), true);
+    
+    assert_eq!(
+      Direction::Left
+        .is_opposite(&Direction::Right), true);
+    assert_eq!(
+      Direction::Right
+        .is_opposite(&Direction::Left), true);
+    
+    assert_eq!(
+      Direction::Left
+        .is_opposite(&Direction::Up), false);
+    
+    assert_eq!(
+      Direction::Right
+        .is_opposite(&Direction::Down), false);
+  }
+
+  #[test]
+  fn test_snake_part_update() {
+    let max_size = Size::from((10, 10));
+    let pos = Pos::from((5, 5));
+    let symbol = Symbol::new(pos);
+    let mut snake_part = SnakePart::new(symbol);
+
+    snake_part.update(Direction::Up, max_size);
+    assert_eq!(snake_part.get_pos().y, 4);
+    snake_part.update(Direction::Down, max_size);
+    assert_eq!(snake_part.get_pos().y, 5);
+    snake_part.update(Direction::Left, max_size);
+    assert_eq!(snake_part.get_pos().x, 4);
+    snake_part.update(Direction::Right, max_size);
+    assert_eq!(snake_part.get_pos().x, 5);
+    
+    snake_part.set_pos(Pos::from((6, 4)));
+    snake_part.update(Direction::Right, Size::from((5, 5)));
+    assert_eq!(snake_part.get_pos().x, 2);
+    snake_part.update(Direction::Left, Size::from((5, 5)));
+    assert_eq!(snake_part.get_pos().x, 6);
+
+    snake_part.update(Direction::Down, Size::from((5, 4)));
+    assert_eq!(snake_part.get_pos().y, 1);
+    snake_part.update(Direction::Up, Size::from((5, 4)));
+    assert_eq!(snake_part.get_pos().y, 4);
   }
 }
