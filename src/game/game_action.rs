@@ -23,36 +23,36 @@ pub struct KeyController {
 
 impl KeyController {
   pub fn new() -> Self {
-    let up_keys: Vec<KeyEvent> = vec![
+    let up_keys = vec![
       KeyCode::Char('w').into(),
       KeyCode::Char('ц').into(),
       KeyCode::Up.into()
     ];
 
-    let down_keys: Vec<KeyEvent> = vec![
+    let down_keys = vec![
       KeyCode::Char('s').into(),
       KeyCode::Char('ы').into(),
       KeyCode::Down.into()
     ];
 
-    let left_keys: Vec<KeyEvent> = vec![
+    let left_keys = vec![
       KeyCode::Char('a').into(),
       KeyCode::Char('ф').into(),
       KeyCode::Left.into()
     ];
 
-    let right_keys: Vec<KeyEvent> = vec![
+    let right_keys = vec![
       KeyCode::Char('d').into(),
       KeyCode::Char('в').into(),
       KeyCode::Right.into()
     ];
 
-    let boost_keys: Vec<KeyEvent> = vec![
+    let boost_keys= vec![
       KeyCode::Char('b').into(),
       KeyCode::Char('и').into()
     ];
 
-    let pause_keys: Vec<KeyEvent> = vec![
+    let pause_keys = vec![
       KeyCode::Char('p').into(),
       KeyCode::Char('з').into(),
       KeyCode::Pause.into()
@@ -108,5 +108,73 @@ impl KeyController {
     }
 
     Ok(action)
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use std::collections::HashSet;
+
+use super::{KeyController, KeyCode, KeyEvent};
+
+  #[test]
+  fn test_check_vec() {
+    let kc = KeyController::new();
+    let keys: Vec<KeyEvent>  = vec![
+      KeyCode::Char('w').into(),
+      KeyCode::Char('ц').into(),
+      KeyCode::Up.into(),
+      KeyCode::Char('s').into(),
+      KeyCode::Char('ы').into(),
+      KeyCode::Down.into(),
+      KeyCode::Char('a').into(),
+      KeyCode::Char('ф').into(),
+      KeyCode::Left.into(),
+      KeyCode::Char('d').into(),
+      KeyCode::Char('в').into(),
+      KeyCode::Right.into(),
+      KeyCode::Char('b').into(),
+      KeyCode::Char('и').into(),
+      KeyCode::Char('p').into(),
+      KeyCode::Char('з').into(),
+      KeyCode::Pause.into(),
+      KeyCode::Esc.into()
+    ];
+
+    for i in 0..keys.len() {
+      assert_eq!(
+        kc.check_vec(&keys, &keys[i]),
+        true
+      );
+    }
+
+    let mut other_keys: Vec<KeyEvent> = Vec::new();
+    for ascii_code in 32..=126 {
+      other_keys.push(
+        KeyCode::Char(
+          char::from(ascii_code)
+        ).into()
+      );
+    }
+
+    //let keys = HashSet::from_iter(keys.iter());
+    let other_keys = other_keys
+      .into_iter()
+      .collect::<HashSet<_>>();
+
+    let keys_set = keys.clone()
+      .into_iter()
+      .collect::<HashSet<_>>();
+
+    let diff = other_keys
+      .difference(&keys_set)
+      .collect::<HashSet<_>>();
+
+    for key in diff {
+      assert_eq!(
+        kc.check_vec(&keys, key),
+        false
+      );
+    }
   }
 }

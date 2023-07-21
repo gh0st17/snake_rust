@@ -92,7 +92,8 @@ impl Drawable for SnakePart {
 
 pub struct Snake {
   parts: Vec<SnakePart>,
-  pub dir: Direction
+  dir: Direction,
+  field_size: Size
 }
 
 impl Snake {
@@ -110,7 +111,8 @@ impl Snake {
             .color(Green)
           )
         ],
-      dir
+      dir,
+      field_size
     }
   }
 
@@ -118,11 +120,11 @@ impl Snake {
     &self.parts
   }
 
-  pub fn update(&mut self, max_size: Size) -> Pos {
+  pub fn update(&mut self) -> Pos {
     let mut prev_pos = self.parts[0].get_pos();
     let mut new_pos = prev_pos.clone();
 
-    self.parts[0].update(self.dir, max_size);
+    self.parts[0].update(self.dir, self.field_size);
 
     for i in 1..self.parts.len() {
       prev_pos = self.parts[i].get_pos();
@@ -199,7 +201,7 @@ mod tests {
     ui_items::Symbol,
     dimensions::{Pos, Size}
   };
-  use super::{Direction, SnakePart};
+  use super::{Direction, SnakePart, Snake};
 
   #[test]
   fn test_is_opposite() {
@@ -252,5 +254,60 @@ mod tests {
     assert_eq!(snake_part.get_pos().y, 1);
     snake_part.update(Direction::Up, Size::from((5, 4)));
     assert_eq!(snake_part.get_pos().y, 4);
+  }
+
+  fn get_snake_with_parts(parts_count: usize) -> Snake {
+    let mut snake = Snake::new(
+      Size::from((20, 20)),
+      Direction::Down
+    );
+
+    let pos = snake.get_head_pos();
+    for y in 1..=parts_count as u16 {
+      snake.add_part(pos.add_y(y));
+    }
+
+    snake
+  }
+
+  #[test]
+  fn test_add_part() {
+    let snake = get_snake_with_parts(10);
+    let pos = snake.get_head_pos();
+
+    for (i, part) in snake.get_parts().iter().enumerate() {
+      assert_eq!(part.get_pos().y, pos.y + i as u16);
+    }
+  }
+
+  #[test]
+  fn test_check_self_eaten() {
+    let parts_count = 10;
+    let mut snake = get_snake_with_parts(parts_count);
+    
+    for _ in 0..5 {
+      snake.update();
+      assert_eq!(snake.check_self_eaten(), true);
+    }
+
+    for _ in 0..5 {
+      snake.update();
+      assert_eq!(snake.check_self_eaten(), false);
+    }
+  }
+
+  #[test]
+  fn test_check_pos() {
+    let parts_count = 10;
+    let snake = get_snake_with_parts(parts_count);
+    let pos = snake.get_head_pos();
+
+    for y in 0..=parts_count {
+      assert_eq!(snake.check_pos(&pos.add_y(y as u16)), true);
+    }
+
+    for y in parts_count + 1..parts_count << 1 {
+      assert_eq!(snake.check_pos(&pos.add_y(y as u16)), false);
+    }
   }
 }

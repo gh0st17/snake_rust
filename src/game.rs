@@ -158,7 +158,7 @@ impl Game {
         self.last_pos.store(
           self.snake
             .lock().unwrap()
-            .update(self.field_size),
+            .update(),
           Ordering::Release
         );
         self.ui.lock().unwrap().draw(
