@@ -12,7 +12,7 @@ use crate::food::{
 
 use crate::ui::{
   UI,
-  dimensions::{Pos, Size},
+  dimensions::Size,
   ui_items::Symbol
 };
 
@@ -26,8 +26,6 @@ use std::{
     atomic::{AtomicBool, Ordering}
   }
 };
-
-use atomic::Atomic;
 
 use crossterm::{
   terminal,
@@ -45,7 +43,6 @@ pub struct Game {
   ui: Arc<Mutex<UI>>,
   snake: Arc<Mutex<Snake>>,
   sequence: Arc<Mutex<VecDeque<Direction>>>,
-  last_pos: Arc<Atomic<Pos>>,
   field_size: Size,
   terminal_size: Size
 }
@@ -71,7 +68,6 @@ impl Game {
       field_size: ui.field_size,
       snake: Arc::new(Mutex::new(Snake::new(ui.field_size, dir))),
       sequence: Arc::new(Mutex::new(VecDeque::new())),
-      last_pos: Arc::new(Atomic::new(Pos::from((0, 0)))),
       ui: Arc::new(Mutex::new(ui)),
       terminal_size: Size::from(terminal::size().unwrap())
     }
@@ -155,17 +151,9 @@ impl Game {
       };
 
       if !self.is_collide.load(Ordering::Acquire) {
-        self.last_pos.store(
-          self.snake
-            .lock().unwrap()
-            .update(),
-          Ordering::Release
-        );
-        self.ui.lock().unwrap().draw(
-          &Symbol::new(
-            self.last_pos.load(Ordering::Acquire)
-          )
-        )?;
+        self.snake
+          .lock().unwrap()
+          .update(self.ui.clone())?;
         self.ui.lock().unwrap().draw::<Snake>(
           &self.snake
             .lock().unwrap()
@@ -182,12 +170,7 @@ impl Game {
   }
 
   fn collision_update(&mut self) -> Result<()> {
-    let s_length = self.snake.lock().unwrap().get_parts().len() as u16 - 1;
-
-    self.ui
-      .lock()
-      .unwrap()
-      .print_stats(&self.score, &s_length)?;
+    self.ui.lock().unwrap().print_stats(&self.score, &0)?;
 
     let mut apple = generate_food(
       &self.field_size, true, &self.snake.lock().unwrap().get_head_pos()
@@ -203,8 +186,8 @@ impl Game {
       ));
     }
 
-    self.ui.lock().unwrap().draw(&apple)?;
     self.ui.lock().unwrap().draw::<Snake>(&self.snake.lock().unwrap())?;
+    self.ui.lock().unwrap().draw(&apple)?;
     self.ui.lock().unwrap().draw_vec(&bricks)?;
 
     loop {
@@ -311,7 +294,7 @@ impl Game {
 
     self.snake
       .lock().unwrap()
-      .add_part(self.last_pos.load(Ordering::Acquire));
+      .add_part();
     
     let snake_pos = self.snake
       .lock().unwrap()

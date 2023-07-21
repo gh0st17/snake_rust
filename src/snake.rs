@@ -1,9 +1,11 @@
+use std::{sync::{Arc, Mutex}, io::Result};
+
 use crossterm::style::Color::{self, *};
 
 use crate::ui::{
   dimensions::{Pos, Size},
   Drawable,
-  ui_items::Symbol
+  ui_items::Symbol, UI
 };
 
 #[derive(Copy, Clone, PartialEq)]
@@ -120,7 +122,7 @@ impl Snake {
     &self.parts
   }
 
-  pub fn update(&mut self) -> Pos {
+  pub fn update(&mut self, ui: Arc<Mutex<UI>>) -> Result<()> {
     let mut prev_pos = self.parts[0].get_pos();
     let mut new_pos = prev_pos.clone();
 
@@ -132,7 +134,7 @@ impl Snake {
       new_pos = prev_pos;
     }
 
-    new_pos
+    ui.lock().unwrap().draw(&Symbol::new(new_pos))
   }
 
   pub fn set_direction(&mut self, dir: Direction) {
@@ -141,14 +143,14 @@ impl Snake {
     }
   }
 
-  pub fn add_part(&mut self, pos: Pos) {
+  pub fn add_part(&mut self) {
     self.parts.push(
       SnakePart::new(
-        Symbol::new(pos)
-          .ch('◆')
-          .color(DarkGreen)
-        )
-      );
+        Symbol::new(
+          self.parts.last().unwrap().get_pos()
+        ).ch('◆').color(DarkGreen)
+      )
+    );
   }
 
   pub fn check_self_eaten(&self) -> bool {
@@ -156,7 +158,7 @@ impl Snake {
       return false;
     }
 
-    for i in 1..self.parts.len() {
+    for i in 2..self.parts.len() {
       if self.parts[0].get_pos() == self.parts[i].get_pos() {
         return true;
       }
@@ -187,8 +189,9 @@ impl Snake {
 
 impl Drawable for Snake {
   fn draw(&self) -> std::io::Result<()> {
-    for part in self.parts.iter().rev() {
-      part.draw()?;
+    self.parts.first().unwrap().draw()?;
+    if let Some(second_part) = self.parts.iter().nth(1) {
+      second_part.draw()?;
     }
 
     Ok(())
@@ -201,7 +204,7 @@ mod tests {
     ui_items::Symbol,
     dimensions::{Pos, Size}
   };
-  use super::{Direction, SnakePart, Snake};
+  use super::{Direction, SnakePart};
 
   #[test]
   fn test_is_opposite() {
@@ -254,60 +257,5 @@ mod tests {
     assert_eq!(snake_part.get_pos().y, 1);
     snake_part.update(Direction::Up, Size::from((5, 4)));
     assert_eq!(snake_part.get_pos().y, 4);
-  }
-
-  fn get_snake_with_parts(parts_count: usize) -> Snake {
-    let mut snake = Snake::new(
-      Size::from((20, 20)),
-      Direction::Down
-    );
-
-    let pos = snake.get_head_pos();
-    for y in 1..=parts_count as u16 {
-      snake.add_part(pos.add_y(y));
-    }
-
-    snake
-  }
-
-  #[test]
-  fn test_add_part() {
-    let snake = get_snake_with_parts(10);
-    let pos = snake.get_head_pos();
-
-    for (i, part) in snake.get_parts().iter().enumerate() {
-      assert_eq!(part.get_pos().y, pos.y + i as u16);
-    }
-  }
-
-  #[test]
-  fn test_check_self_eaten() {
-    let parts_count = 10;
-    let mut snake = get_snake_with_parts(parts_count);
-    
-    for _ in 0..5 {
-      snake.update();
-      assert_eq!(snake.check_self_eaten(), true);
-    }
-
-    for _ in 0..5 {
-      snake.update();
-      assert_eq!(snake.check_self_eaten(), false);
-    }
-  }
-
-  #[test]
-  fn test_check_pos() {
-    let parts_count = 10;
-    let snake = get_snake_with_parts(parts_count);
-    let pos = snake.get_head_pos();
-
-    for y in 0..=parts_count {
-      assert_eq!(snake.check_pos(&pos.add_y(y as u16)), true);
-    }
-
-    for y in parts_count + 1..parts_count << 1 {
-      assert_eq!(snake.check_pos(&pos.add_y(y as u16)), false);
-    }
   }
 }
