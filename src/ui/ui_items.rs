@@ -119,7 +119,7 @@ impl Drawable for PopupMessage {
       ).with(DarkRed).bold()),
 
       MoveTo::from(self.origin.add_x(2).add_y(1)),
-      Print(&self.message.clone().with(Red).bold())
+      Print(&self.message.clone().with(DarkRed).bold())
     )?;
 
     Ok(())

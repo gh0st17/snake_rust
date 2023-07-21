@@ -26,10 +26,8 @@ jobs:
       run: rustc -V
     - name: cargo version
       run: cargo -V
-    - name: Test
-      run: cargo test --jobs 1
-    - name: Build
-      run: cargo build --verbose
+    - name: Test & Build
+      run: cargo test --jobs 1 -v && cargo build -v
       
   build-windows:
 
@@ -42,9 +40,9 @@ jobs:
     - name: cargo version
       run: cargo -V
     - name: Test
-      run: cargo test --jobs 1
+      run: cargo test --jobs 1 -v
     - name: Build
-      run: cargo build --verbose
+      run: cargo build -v
       
   build-macos:
 
@@ -56,7 +54,5 @@ jobs:
       run: rustc -V
     - name: cargo version
       run: cargo -V
-    - name: Test
-      run: cargo test --jobs 1
-    - name: Build
-      run: cargo build --verbose
+    - name: Test & Build
+      run: cargo test --jobs 1 -v && cargo build -v

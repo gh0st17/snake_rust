@@ -1,9 +1,11 @@
+use std::{sync::{Arc, Mutex}, io::Result};
+
 use crossterm::style::Color::{self, *};
 
 use crate::ui::{
   dimensions::{Pos, Size},
   Drawable,
-  ui_items::Symbol
+  ui_items::Symbol, UI
 };
 
 #[derive(Copy, Clone, PartialEq)]
@@ -92,7 +94,8 @@ impl Drawable for SnakePart {
 
 pub struct Snake {
   parts: Vec<SnakePart>,
-  pub dir: Direction
+  dir: Direction,
+  field_size: Size
 }
 
 impl Snake {
@@ -110,7 +113,8 @@ impl Snake {
             .color(Green)
           )
         ],
-      dir
+      dir,
+      field_size
     }
   }
 
@@ -118,11 +122,11 @@ impl Snake {
     &self.parts
   }
 
-  pub fn update(&mut self, max_size: Size) -> Pos {
+  pub fn update(&mut self, ui: Arc<Mutex<UI>>) -> Result<()> {
     let mut prev_pos = self.parts[0].get_pos();
     let mut new_pos = prev_pos.clone();
 
-    self.parts[0].update(self.dir, max_size);
+    self.parts[0].update(self.dir, self.field_size);
 
     for i in 1..self.parts.len() {
       prev_pos = self.parts[i].get_pos();
@@ -130,7 +134,7 @@ impl Snake {
       new_pos = prev_pos;
     }
 
-    new_pos
+    ui.lock().unwrap().draw(&Symbol::new(new_pos))
   }
 
   pub fn set_direction(&mut self, dir: Direction) {
@@ -139,14 +143,14 @@ impl Snake {
     }
   }
 
-  pub fn add_part(&mut self, pos: Pos) {
+  pub fn add_part(&mut self) {
     self.parts.push(
       SnakePart::new(
-        Symbol::new(pos)
-          .ch('◆')
-          .color(DarkGreen)
-        )
-      );
+        Symbol::new(
+          self.parts.last().unwrap().get_pos()
+        ).ch('◆').color(DarkGreen)
+      )
+    );
   }
 
   pub fn check_self_eaten(&self) -> bool {
@@ -154,7 +158,7 @@ impl Snake {
       return false;
     }
 
-    for i in 1..self.parts.len() {
+    for i in 2..self.parts.len() {
       if self.parts[0].get_pos() == self.parts[i].get_pos() {
         return true;
       }
@@ -185,8 +189,9 @@ impl Snake {
 
 impl Drawable for Snake {
   fn draw(&self) -> std::io::Result<()> {
-    for part in self.parts.iter().rev() {
-      part.draw()?;
+    self.parts.first().unwrap().draw()?;
+    if let Some(second_part) = self.parts.iter().nth(1) {
+      second_part.draw()?;
     }
 
     Ok(())
