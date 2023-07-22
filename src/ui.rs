@@ -39,14 +39,13 @@ pub struct UI {
 
 impl UI {
   pub fn new() -> error::Result<UI> {
-    enable_raw_mode()
-      .expect("Could not turn on Raw mode");
-
     let (mut width, mut height) = crossterm::terminal::size()?;
 
     if width < MINIMUM_WIDTH || height < MINIMUM_HEIGHT {
       return Err(SnakeError::Dimension(MINIMUM_WIDTH, MINIMUM_HEIGHT));
     }
+
+    enable_raw_mode()?;
     
     execute!(
       stdout(),
