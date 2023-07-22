@@ -38,7 +38,6 @@ pub struct Game {
   stop_bool: Arc<AtomicBool>,
   pause: Arc<AtomicBool>,
   boost: Arc<AtomicBool>,
-  is_collide: Arc<AtomicBool>,
   score: u16,
   ui: Arc<Mutex<UI>>,
   snake: Arc<Mutex<Snake>>,
@@ -63,7 +62,6 @@ impl Game {
       stop_bool: Arc::new(AtomicBool::new(false)),
       pause: Arc::new(AtomicBool::new(false)),
       boost: Arc::new(AtomicBool::new(false)),
-      is_collide: Arc::new(AtomicBool::new(false)),
       score: 0,
       field_size: ui.field_size,
       snake: Arc::new(Mutex::new(Snake::new(ui.field_size, dir))),
@@ -150,7 +148,7 @@ impl Game {
         None => ()
       };
 
-      if !self.is_collide.load(Ordering::Acquire) {
+      if !self.stop_bool.load(Ordering::Acquire) {
         self.snake
           .lock().unwrap()
           .update(self.ui.clone())?;
@@ -159,8 +157,7 @@ impl Game {
             .lock().unwrap()
         )?;
       }
-
-      if self.stop_bool.load(Ordering::Acquire) {
+      else {
         break;
       }
     }
@@ -212,7 +209,6 @@ impl Game {
         .print_popup_message("Сам себя съел!")?;
 
       self.stop_bool.store(true, Ordering::Release);
-      self.is_collide.store(true, Ordering::Release);
       sleep(Duration::from_secs(3));
     }
 
@@ -226,7 +222,6 @@ impl Game {
           .print_popup_message("Съел кирпич!")?;
 
         self.stop_bool.store(true, Ordering::Release);
-        self.is_collide.store(true, Ordering::Release);
         sleep(Duration::from_secs(3));
       }
     }
