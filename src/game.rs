@@ -91,7 +91,6 @@ impl Game {
     }
 
     self.barrier.wait();
-    self.ui.lock().unwrap().disable_raw_mode();
   }
 
   fn time_update(&mut self) -> Result<()> {
@@ -285,8 +284,8 @@ impl Game {
     ui.print_stats(
       &self.score,
       &(self.snake
-          .lock().unwrap()
-          .get_parts().len() as u16)
+        .lock().unwrap()
+        .get_parts().len() as u16)
     )?;
 
     self.snake
@@ -356,5 +355,11 @@ impl Game {
     }
 
     Ok(())
+  }
+}
+
+impl Drop for Game {
+  fn drop(&mut self) {
+    self.ui.lock().unwrap().disable_raw_mode();
   }
 }
