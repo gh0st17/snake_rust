@@ -119,25 +119,15 @@ impl Game {
 
     loop {
       if self.pause.load(Ordering::Acquire) {
-        sleep(Duration::from_millis(100));
+        sleep(Duration::from_millis(50));
         continue;
       }
         
       if self.boost.load(Ordering::Acquire) {
         sleep(Duration::from_millis(130));
-
-        if !_boost {
-          _boost = true;
-          self.snake.lock().unwrap().set_head_color(Cyan);
-        }
       }
       else {
         sleep(Duration::from_millis(200));
-
-        if _boost {
-          _boost = false;
-          self.snake.lock().unwrap().set_head_color(Green);
-        }
       }
 
       match self.sequence.lock().unwrap().pop_front() {
@@ -232,25 +222,34 @@ impl Game {
     Ok(())
   }
 
+  fn boost_mode_toggle(&mut self) {
+    let boost = self.boost.load(Ordering::Acquire);
+    if !boost {
+      self.snake.lock().unwrap().set_head_color(Cyan);
+    }
+    else {
+      self.snake.lock().unwrap().set_head_color(Green);
+    }
+    self.boost.store(!boost, Ordering::Release);
+  }
+
   fn fetch_event(&mut self) -> Result<()> {
     let key_controller = KeyController::new();
     loop {
       let action = key_controller.fetch_action()?;
 
       if !self.pause.load(Ordering::Acquire) {
-        let mut sequence = self.sequence.lock().unwrap();
+        let sequence = self.sequence.clone();
+        let mut sequence = sequence.lock().unwrap();
 
         match action {
-          KeyAction::None => (),
+          KeyAction::None      => (),
           KeyAction::MoveUp    => sequence.push_back(Direction::Up),
           KeyAction::MoveDown  => sequence.push_back(Direction::Down),
           KeyAction::MoveLeft  => sequence.push_back(Direction::Left),
           KeyAction::MoveRight => sequence.push_back(Direction::Right),
-          KeyAction::Boost => {
-            let _boost = self.boost.load(Ordering::Acquire);
-            self.boost.store(!_boost, Ordering::Release);
-          }
-          KeyAction::Pause => (),
+          KeyAction::Boost     => self.boost_mode_toggle(),
+          KeyAction::Pause     => (),
           KeyAction::Exit => {
             self.ui.lock().unwrap()
             .print_popup_message("Прерывание...")?;
