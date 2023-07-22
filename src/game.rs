@@ -118,9 +118,8 @@ impl Game {
     let mut _boost = false;
 
     loop {
-      if self.pause.load(Ordering::Acquire) {
+      while self.pause.load(Ordering::Acquire) {
         sleep(Duration::from_millis(50));
-        continue;
       }
         
       if self.boost.load(Ordering::Acquire) {
@@ -181,6 +180,10 @@ impl Game {
     }
 
     loop {
+      while self.pause.load(Ordering::Acquire) {
+        sleep(Duration::from_millis(50));
+      }
+
       self.collision_check(&mut apple, &mut bricks)?;
       if self.stop_bool.load(Ordering::Acquire) {
         break;
@@ -222,7 +225,7 @@ impl Game {
     Ok(())
   }
 
-  fn boost_mode_toggle(&mut self) {
+  fn boost_mode_toggle(&mut self) -> Result<()> {
     let boost = self.boost.load(Ordering::Acquire);
     if !boost {
       self.snake.lock().unwrap().set_head_color(Cyan);
@@ -231,6 +234,21 @@ impl Game {
       self.snake.lock().unwrap().set_head_color(Green);
     }
     self.boost.store(!boost, Ordering::Release);
+
+    Ok(())
+  }
+
+  fn pause_mode_toggle(&mut self) -> Result<()>{
+    let pause = self.pause.load(Ordering::Acquire);
+    if !pause {
+      self.ui.lock().unwrap().print_popup_message("Пауза")?;
+    }
+    else {
+      self.ui.lock().unwrap().clear_popup_message()?;
+    }
+    self.pause.store(!pause, Ordering::Release);
+
+    Ok(())
   }
 
   fn fetch_event(&mut self) -> Result<()> {
@@ -248,7 +266,7 @@ impl Game {
           KeyAction::MoveDown  => sequence.push_back(Direction::Down),
           KeyAction::MoveLeft  => sequence.push_back(Direction::Left),
           KeyAction::MoveRight => sequence.push_back(Direction::Right),
-          KeyAction::Boost     => self.boost_mode_toggle(),
+          KeyAction::Boost     => self.boost_mode_toggle().unwrap(),
           KeyAction::Pause     => (),
           KeyAction::Exit => {
             self.ui.lock().unwrap()
@@ -261,16 +279,7 @@ impl Game {
       }
 
       if let KeyAction::Pause = action {
-        let _pause = self.pause.load(Ordering::Acquire);
-        self.pause.store(!_pause, Ordering::Release);
-        let _ui = self.ui.lock().unwrap();
-
-        if !_pause {
-          _ui.print_popup_message("Пауза")?;
-        }
-        else {
-          _ui.clear_popup_message()?;
-        }
+        self.pause_mode_toggle().unwrap();
       }
     }
 
