@@ -166,25 +166,29 @@ impl Game {
   }
 
   fn collision_update(&mut self) -> Result<()> {
-    self.ui.lock().unwrap().print_stats(&self.score, &0)?;
-
-    let mut apple = generate_food(
-      &self.field_size, true, &self.snake.lock().unwrap().get_head_pos()
-    );
+    let mut apple;    
+    let mut bricks = Vec::new();
     
-    let mut bricks: Vec<Box<dyn Food>> = Vec::new();
-    let density = self.field_size.width as u64 * 
+    {
+      let head_pos = self.snake.lock().unwrap().get_head_pos();
+      let density = self.field_size.width as u64 * 
       self.field_size.height as u64 / 100;
 
-    for _ in 0..density {
-      bricks.push(generate_food(
-        &self.field_size, false, &self.snake.lock().unwrap().get_head_pos()
-      ));
-    }
+      for _ in 0..density {
+        bricks.push(generate_food(
+          &self.field_size, false, &head_pos
+        ));
+      }
 
-    self.ui.lock().unwrap().draw::<Snake>(&self.snake.lock().unwrap())?;
-    self.ui.lock().unwrap().draw(&apple)?;
-    self.ui.lock().unwrap().draw_vec(&bricks)?;
+      apple = generate_food(
+        &self.field_size, true, &head_pos
+      );
+
+      self.ui.lock().unwrap().print_stats(&self.score, &0)?;
+      self.ui.lock().unwrap().draw::<Snake>(&self.snake.lock().unwrap())?;
+      self.ui.lock().unwrap().draw(&apple)?;
+      self.ui.lock().unwrap().draw_vec(&bricks)?;
+    }
 
     loop {
       self.collision_check(&mut apple, &mut bricks)?;
