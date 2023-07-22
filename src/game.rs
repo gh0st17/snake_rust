@@ -235,12 +235,14 @@ impl Game {
       let action = key_controller.fetch_action()?;
 
       if !self.pause.load(Ordering::Acquire) {
+        let mut sequence = self.sequence.lock().unwrap();
+
         match action {
           KeyAction::None => (),
-          KeyAction::MoveUp    => self.sequence.lock().unwrap().push_back(Direction::Up),
-          KeyAction::MoveDown  => self.sequence.lock().unwrap().push_back(Direction::Down),
-          KeyAction::MoveLeft  => self.sequence.lock().unwrap().push_back(Direction::Left),
-          KeyAction::MoveRight => self.sequence.lock().unwrap().push_back(Direction::Right),
+          KeyAction::MoveUp    => sequence.push_back(Direction::Up),
+          KeyAction::MoveDown  => sequence.push_back(Direction::Down),
+          KeyAction::MoveLeft  => sequence.push_back(Direction::Left),
+          KeyAction::MoveRight => sequence.push_back(Direction::Right),
           KeyAction::Boost => {
             let _boost = self.boost.load(Ordering::Acquire);
             self.boost.store(!_boost, Ordering::Release);
