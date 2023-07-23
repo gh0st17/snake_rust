@@ -174,7 +174,7 @@ impl Snake {
   }
 
   pub fn get_head_pos(&self) -> Pos {
-    self.parts.first().unwrap().get_pos()
+    self.parts[0].get_pos()
   }
 
   pub fn set_head_color(&mut self, color: Color) {
@@ -186,7 +186,7 @@ impl Snake {
 impl Drawable for Snake {
   fn draw(&self) -> std::io::Result<()> {
     self.parts.first().unwrap().draw()?;
-    if let Some(second_part) = self.parts.iter().nth(1) {
+    if let Some(second_part) = self.parts.get(1) {
       second_part.draw()?;
     }
 
@@ -221,7 +221,6 @@ mod tests {
     assert_eq!(
       Direction::Left
         .is_opposite(&Direction::Up), false);
-    
     assert_eq!(
       Direction::Right
         .is_opposite(&Direction::Down), false);

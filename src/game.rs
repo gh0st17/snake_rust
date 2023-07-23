@@ -129,12 +129,9 @@ impl Game {
         sleep(Duration::from_millis(200));
       }
 
-      match self.sequence.lock().unwrap().pop_front() {
-        Some(dir) => {
-          self.snake.lock().unwrap().set_direction(dir)
-        },
-        None => ()
-      };
+      if let Some(dir) = self.sequence.lock().unwrap().pop_front() {
+        self.snake.lock().unwrap().set_direction(dir)
+      }
 
       if !self.stop_bool.load(Ordering::Acquire) {
         self.snake
@@ -225,17 +222,11 @@ impl Game {
     Ok(())
   }
 
-  fn boost_mode_toggle(&mut self) -> Result<()> {
+  fn boost_mode_toggle(&mut self) {
     let boost = self.boost.load(Ordering::Acquire);
-    if !boost {
-      self.snake.lock().unwrap().set_head_color(Cyan);
-    }
-    else {
-      self.snake.lock().unwrap().set_head_color(Green);
-    }
+    let color = if !boost { Cyan } else { Green };
+    self.snake.lock().unwrap().set_head_color(color);
     self.boost.store(!boost, Ordering::Release);
-
-    Ok(())
   }
 
   fn pause_mode_toggle(&mut self) -> Result<()>{
@@ -261,13 +252,12 @@ impl Game {
         let mut sequence = sequence.lock().unwrap();
 
         match action {
-          KeyAction::None      => (),
+          KeyAction::None | KeyAction::Pause => (),
           KeyAction::MoveUp    => sequence.push_back(Direction::Up),
           KeyAction::MoveDown  => sequence.push_back(Direction::Down),
           KeyAction::MoveLeft  => sequence.push_back(Direction::Left),
           KeyAction::MoveRight => sequence.push_back(Direction::Right),
-          KeyAction::Boost     => self.boost_mode_toggle().unwrap(),
-          KeyAction::Pause     => (),
+          KeyAction::Boost     => self.boost_mode_toggle(),
           KeyAction::Exit => {
             self.ui.lock().unwrap()
             .print_popup_message("Прерывание...")?;
