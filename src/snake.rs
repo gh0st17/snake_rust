@@ -154,10 +154,6 @@ impl Snake {
   }
 
   pub fn check_self_eaten(&self) -> bool {
-    if self.parts.len() == 1 {
-      return false;
-    }
-
     for i in 2..self.parts.len() {
       if self.parts[0].get_pos() == self.parts[i].get_pos() {
         return true;
