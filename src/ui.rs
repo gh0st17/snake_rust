@@ -7,7 +7,7 @@ use dimensions::{Pos, Size};
 use staticui::StaticUI;
 
 use ui_items::{
-  Label, PopupMessage
+  Symbol, Label, PopupMessage
 };
 
 use crate::error::{*, self};
@@ -20,8 +20,6 @@ use crossterm::{
   style::{Color::*, Stylize},
   execute
 };
-
-use self::ui_items::Symbol;
 
 const MINIMUM_WIDTH: u16 = 80;
 const MINIMUM_HEIGHT: u16 = 14;
