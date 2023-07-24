@@ -123,7 +123,7 @@ impl Game {
       }
         
       if self.boost.load(Ordering::Acquire) {
-        sleep(Duration::from_millis(130));
+        sleep(Duration::from_millis(140));
       }
       else {
         sleep(Duration::from_millis(200));
