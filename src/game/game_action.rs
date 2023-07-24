@@ -47,11 +47,13 @@ impl KeyController {
 
   pub fn fetch_action(&self) -> Result<KeyAction> {
     let event = read()?;
-    let action;
+    let mut action = KeyAction::None;
 
     match event {
       Event::Key(key_event) => {
-        action = self.keys[&key_event.code];
+        if let Some(key) = self.keys.get(&key_event.code) {
+          action = key.clone()
+        }
       },
       _ => action = KeyAction::None
     }

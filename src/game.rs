@@ -83,7 +83,7 @@ impl Game {
     for thread in threads {
       let shared_self = self.clone();
 
-      let _ = thread::spawn(move || -> Result<()> {
+      let _ = thread::spawn(move || {
         let local_self = &mut shared_self.clone();
 
         thread(local_self)
@@ -260,7 +260,7 @@ impl Game {
           KeyAction::Boost     => self.boost_mode_toggle(),
           KeyAction::Exit => {
             self.ui.lock().unwrap()
-            .print_popup_message("Прерывание...")?;
+              .print_popup_message("Прерывание...")?;
 
             self.stop_bool.store(true, Ordering::Release);
             break;
