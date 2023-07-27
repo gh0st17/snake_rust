@@ -58,7 +58,7 @@ impl Game {
     };
 
     Game {
-      barrier: Arc::new(Barrier::new(4)),
+      barrier: Arc::new(Barrier::new(3)),
       stop_bool: Arc::new(AtomicBool::new(false)),
       pause: Arc::new(AtomicBool::new(false)),
       boost: Arc::new(AtomicBool::new(false)),
@@ -75,7 +75,6 @@ impl Game {
     let threads = vec![
       Self::time_update,
       Self::snake_update,
-      Self::collision_update,
       Self::fetch_event,
       Self::terminal_size_checker
     ];
@@ -114,8 +113,36 @@ impl Game {
     Ok(())
   }
 
+  fn init_food(&self) -> Result<(Box<dyn Food>, Vec<Box<dyn Food>>)> {
+    let apple;    
+    let mut bricks = Vec::new();
+    
+    let head_pos = self.snake.lock().unwrap().get_head_pos();
+    let density = self.field_size.width as u64 * 
+    self.field_size.height as u64 / 100;
+
+    for _ in 0..density {
+      bricks.push(generate_food(
+        &self.field_size, false, &head_pos
+      ));
+    }
+
+    apple = generate_food(
+      &self.field_size, true, &head_pos
+    );
+
+    self.ui.lock().unwrap().print_stats(&self.score, &0)?;
+    self.ui.lock().unwrap().draw::<Snake>(&self.snake.lock().unwrap())?;
+    self.ui.lock().unwrap().draw(&apple)?;
+    self.ui.lock().unwrap().draw_vec(&bricks)?;
+
+    Ok((apple, bricks))
+  } 
+
   fn snake_update(&mut self) -> Result<()> {
     let mut _boost = false;
+
+    let (mut apple, mut bricks) = self.init_food()?;
 
     loop {
       while self.pause.load(Ordering::Acquire) {
@@ -145,49 +172,8 @@ impl Game {
       else {
         break;
       }
-    }
-
-    self.barrier.wait();
-    Ok(())
-  }
-
-  fn collision_update(&mut self) -> Result<()> {
-    let mut apple;    
-    let mut bricks = Vec::new();
-    
-    {
-      let head_pos = self.snake.lock().unwrap().get_head_pos();
-      let density = self.field_size.width as u64 * 
-      self.field_size.height as u64 / 100;
-
-      for _ in 0..density {
-        bricks.push(generate_food(
-          &self.field_size, false, &head_pos
-        ));
-      }
-
-      apple = generate_food(
-        &self.field_size, true, &head_pos
-      );
-
-      self.ui.lock().unwrap().print_stats(&self.score, &0)?;
-      self.ui.lock().unwrap().draw::<Snake>(&self.snake.lock().unwrap())?;
-      self.ui.lock().unwrap().draw(&apple)?;
-      self.ui.lock().unwrap().draw_vec(&bricks)?;
-    }
-
-    loop {
-      while self.pause.load(Ordering::Acquire) {
-        sleep(Duration::from_millis(50));
-      }
 
       self.collision_check(&mut apple, &mut bricks)?;
-      if self.stop_bool.load(Ordering::Acquire) {
-        break;
-      }
-      else {
-        sleep(Duration::from_millis(50));
-      }
     }
 
     self.barrier.wait();
