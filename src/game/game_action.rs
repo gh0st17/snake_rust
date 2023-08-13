@@ -1,5 +1,5 @@
 use crossterm::event::{
-  KeyCode, read, Event
+  KeyCode, read, Event, KeyEventKind
 };
 
 use std::{
@@ -51,8 +51,13 @@ impl KeyController {
 
     match event {
       Event::Key(key_event) => {
-        if let Some(key) = self.keys.get(&key_event.code) {
-          action = key.clone()
+        if let KeyEventKind::Press = key_event.kind {
+          if let Some(key) = self.keys.get(&key_event.code) {
+            action = key.clone()
+          }
+        }
+        else {
+          action = KeyAction::None
         }
       },
       _ => action = KeyAction::None
