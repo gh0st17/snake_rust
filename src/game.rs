@@ -236,13 +236,14 @@ impl Game {
       if !self.pause.load(Ordering::Acquire) {
         let sequence = self.sequence.clone();
         let mut sequence = sequence.lock().unwrap();
+        let mut dir = None;
 
         match action {
           KeyAction::None | KeyAction::Pause => (),
-          KeyAction::MoveUp    => sequence.push_back(Direction::Up),
-          KeyAction::MoveDown  => sequence.push_back(Direction::Down),
-          KeyAction::MoveLeft  => sequence.push_back(Direction::Left),
-          KeyAction::MoveRight => sequence.push_back(Direction::Right),
+          KeyAction::MoveUp    => dir = Some(Direction::Up),
+          KeyAction::MoveDown  => dir = Some(Direction::Down),
+          KeyAction::MoveLeft  => dir = Some(Direction::Left),
+          KeyAction::MoveRight => dir = Some(Direction::Right),
           KeyAction::Boost     => self.boost_mode_toggle(),
           KeyAction::Exit => {
             self.ui.lock().unwrap()
@@ -250,6 +251,17 @@ impl Game {
 
             self.stop_bool.store(true, Ordering::Release);
             break;
+          }
+        }
+
+        if let Some(d) = dir {
+          if let Some(last) = sequence.back() {
+            if *last != d {
+              sequence.push_back(d)
+            }
+          }
+          else {
+            sequence.push_back(d)
           }
         }
       }
