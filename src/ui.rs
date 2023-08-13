@@ -7,7 +7,7 @@ use dimensions::{Pos, Size};
 use staticui::StaticUI;
 
 use ui_items::{
-  Label, PopupMessage
+  Symbol, Label, PopupMessage
 };
 
 use crate::error::{*, self};
@@ -20,8 +20,6 @@ use crossterm::{
   style::{Color::*, Stylize},
   execute
 };
-
-use self::ui_items::Symbol;
 
 const MINIMUM_WIDTH: u16 = 80;
 const MINIMUM_HEIGHT: u16 = 14;
@@ -39,14 +37,13 @@ pub struct UI {
 
 impl UI {
   pub fn new() -> error::Result<UI> {
-    enable_raw_mode()
-      .expect("Could not turn on Raw mode");
-
     let (mut width, mut height) = crossterm::terminal::size()?;
 
     if width < MINIMUM_WIDTH || height < MINIMUM_HEIGHT {
       return Err(SnakeError::Dimension(MINIMUM_WIDTH, MINIMUM_HEIGHT));
     }
+
+    enable_raw_mode()?;
     
     execute!(
       stdout(),

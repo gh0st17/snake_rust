@@ -17,7 +17,7 @@ use crate::ui::{
 };
 
 use std::{
-  collections::VecDeque,
+  collections::LinkedList,
   io::Result,
   thread::{sleep, self},
   time::Duration,
@@ -38,11 +38,10 @@ pub struct Game {
   stop_bool: Arc<AtomicBool>,
   pause: Arc<AtomicBool>,
   boost: Arc<AtomicBool>,
-  is_collide: Arc<AtomicBool>,
   score: u16,
   ui: Arc<Mutex<UI>>,
   snake: Arc<Mutex<Snake>>,
-  sequence: Arc<Mutex<VecDeque<Direction>>>,
+  sequence: Arc<Mutex<LinkedList<Direction>>>,
   field_size: Size,
   terminal_size: Size
 }
@@ -59,15 +58,14 @@ impl Game {
     };
 
     Game {
-      barrier: Arc::new(Barrier::new(4)),
+      barrier: Arc::new(Barrier::new(3)),
       stop_bool: Arc::new(AtomicBool::new(false)),
       pause: Arc::new(AtomicBool::new(false)),
       boost: Arc::new(AtomicBool::new(false)),
-      is_collide: Arc::new(AtomicBool::new(false)),
       score: 0,
       field_size: ui.field_size,
       snake: Arc::new(Mutex::new(Snake::new(ui.field_size, dir))),
-      sequence: Arc::new(Mutex::new(VecDeque::new())),
+      sequence: Arc::new(Mutex::new(LinkedList::new())),
       ui: Arc::new(Mutex::new(ui)),
       terminal_size: Size::from(terminal::size().unwrap())
     }
@@ -77,7 +75,6 @@ impl Game {
     let threads = vec![
       Self::time_update,
       Self::snake_update,
-      Self::collision_update,
       Self::fetch_event,
       Self::terminal_size_checker
     ];
@@ -85,7 +82,7 @@ impl Game {
     for thread in threads {
       let shared_self = self.clone();
 
-      let _ = thread::spawn(move || -> Result<()> {
+      let _ = thread::spawn(move || {
         let local_self = &mut shared_self.clone();
 
         thread(local_self)
@@ -93,7 +90,6 @@ impl Game {
     }
 
     self.barrier.wait();
-    self.ui.lock().unwrap().disable_raw_mode();
   }
 
   fn time_update(&mut self) -> Result<()> {
@@ -117,40 +113,54 @@ impl Game {
     Ok(())
   }
 
+  fn init_food(&self) -> Result<(Box<dyn Food>, Vec<Box<dyn Food>>)> {
+    let apple;    
+    let mut bricks = Vec::new();
+    
+    let head_pos = self.snake.lock().unwrap().get_head_pos();
+    let density = self.field_size.width as u64 * 
+    self.field_size.height as u64 / 100;
+
+    for _ in 0..density {
+      bricks.push(generate_food(
+        &self.field_size, false, &head_pos
+      ));
+    }
+
+    apple = generate_food(
+      &self.field_size, true, &head_pos
+    );
+
+    self.ui.lock().unwrap().print_stats(&self.score, &0)?;
+    self.ui.lock().unwrap().draw::<Snake>(&self.snake.lock().unwrap())?;
+    self.ui.lock().unwrap().draw(&apple)?;
+    self.ui.lock().unwrap().draw_vec(&bricks)?;
+
+    Ok((apple, bricks))
+  } 
+
   fn snake_update(&mut self) -> Result<()> {
     let mut _boost = false;
 
+    let (mut apple, mut bricks) = self.init_food()?;
+
     loop {
-      if self.pause.load(Ordering::Acquire) {
-        sleep(Duration::from_millis(100));
-        continue;
+      while self.pause.load(Ordering::Acquire) {
+        sleep(Duration::from_millis(50));
       }
         
       if self.boost.load(Ordering::Acquire) {
-        sleep(Duration::from_millis(130));
-
-        if !_boost {
-          _boost = true;
-          self.snake.lock().unwrap().set_head_color(Cyan);
-        }
+        sleep(Duration::from_millis(150));
       }
       else {
         sleep(Duration::from_millis(200));
-
-        if _boost {
-          _boost = false;
-          self.snake.lock().unwrap().set_head_color(Green);
-        }
       }
 
-      match self.sequence.lock().unwrap().pop_front() {
-        Some(dir) => {
-          self.snake.lock().unwrap().set_direction(dir)
-        },
-        None => ()
-      };
+      if let Some(dir) = self.sequence.lock().unwrap().pop_front() {
+        self.snake.lock().unwrap().set_direction(dir)
+      }
 
-      if !self.is_collide.load(Ordering::Acquire) {
+      if !self.stop_bool.load(Ordering::Acquire) {
         self.snake
           .lock().unwrap()
           .update(self.ui.clone())?;
@@ -159,45 +169,11 @@ impl Game {
             .lock().unwrap()
         )?;
       }
-
-      if self.stop_bool.load(Ordering::Acquire) {
-        break;
-      }
-    }
-
-    self.barrier.wait();
-    Ok(())
-  }
-
-  fn collision_update(&mut self) -> Result<()> {
-    self.ui.lock().unwrap().print_stats(&self.score, &0)?;
-
-    let mut apple = generate_food(
-      &self.field_size, true, &self.snake.lock().unwrap().get_head_pos()
-    );
-    
-    let mut bricks: Vec<Box<dyn Food>> = Vec::new();
-    let density = self.field_size.width as u64 * 
-      self.field_size.height as u64 / 100;
-
-    for _ in 0..density {
-      bricks.push(generate_food(
-        &self.field_size, false, &self.snake.lock().unwrap().get_head_pos()
-      ));
-    }
-
-    self.ui.lock().unwrap().draw::<Snake>(&self.snake.lock().unwrap())?;
-    self.ui.lock().unwrap().draw(&apple)?;
-    self.ui.lock().unwrap().draw_vec(&bricks)?;
-
-    loop {
-      self.collision_check(&mut apple, &mut bricks)?;
-      if self.stop_bool.load(Ordering::Acquire) {
-        break;
-      }
       else {
-        sleep(Duration::from_millis(50));
+        break;
       }
+
+      self.collision_check(&mut apple, &mut bricks)?;
     }
 
     self.barrier.wait();
@@ -212,7 +188,6 @@ impl Game {
         .print_popup_message("Сам себя съел!")?;
 
       self.stop_bool.store(true, Ordering::Release);
-      self.is_collide.store(true, Ordering::Release);
       sleep(Duration::from_secs(3));
     }
 
@@ -226,10 +201,29 @@ impl Game {
           .print_popup_message("Съел кирпич!")?;
 
         self.stop_bool.store(true, Ordering::Release);
-        self.is_collide.store(true, Ordering::Release);
         sleep(Duration::from_secs(3));
       }
     }
+
+    Ok(())
+  }
+
+  fn boost_mode_toggle(&mut self) {
+    let boost = self.boost.load(Ordering::Acquire);
+    let color = if !boost { Cyan } else { Green };
+    self.snake.lock().unwrap().set_head_color(color);
+    self.boost.store(!boost, Ordering::Release);
+  }
+
+  fn pause_mode_toggle(&mut self) -> Result<()>{
+    let pause = self.pause.load(Ordering::Acquire);
+    if !pause {
+      self.ui.lock().unwrap().print_popup_message("Пауза")?;
+    }
+    else {
+      self.ui.lock().unwrap().clear_popup_message()?;
+    }
+    self.pause.store(!pause, Ordering::Release);
 
     Ok(())
   }
@@ -240,20 +234,19 @@ impl Game {
       let action = key_controller.fetch_action()?;
 
       if !self.pause.load(Ordering::Acquire) {
+        let sequence = self.sequence.clone();
+        let mut sequence = sequence.lock().unwrap();
+
         match action {
-          KeyAction::None => (),
-          KeyAction::MoveUp    => self.sequence.lock().unwrap().push_back(Direction::Up),
-          KeyAction::MoveDown  => self.sequence.lock().unwrap().push_back(Direction::Down),
-          KeyAction::MoveLeft  => self.sequence.lock().unwrap().push_back(Direction::Left),
-          KeyAction::MoveRight => self.sequence.lock().unwrap().push_back(Direction::Right),
-          KeyAction::Boost => {
-            let _boost = self.boost.load(Ordering::Acquire);
-            self.boost.store(!_boost, Ordering::Release);
-          }
-          KeyAction::Pause => (),
+          KeyAction::None | KeyAction::Pause => (),
+          KeyAction::MoveUp    => sequence.push_back(Direction::Up),
+          KeyAction::MoveDown  => sequence.push_back(Direction::Down),
+          KeyAction::MoveLeft  => sequence.push_back(Direction::Left),
+          KeyAction::MoveRight => sequence.push_back(Direction::Right),
+          KeyAction::Boost     => self.boost_mode_toggle(),
           KeyAction::Exit => {
             self.ui.lock().unwrap()
-            .print_popup_message("Прерывание...")?;
+              .print_popup_message("Прерывание...")?;
 
             self.stop_bool.store(true, Ordering::Release);
             break;
@@ -262,16 +255,7 @@ impl Game {
       }
 
       if let KeyAction::Pause = action {
-        let _pause = self.pause.load(Ordering::Acquire);
-        self.pause.store(!_pause, Ordering::Release);
-        let _ui = self.ui.lock().unwrap();
-
-        if !_pause {
-          _ui.print_popup_message("Пауза")?;
-        }
-        else {
-          _ui.clear_popup_message()?;
-        }
+        self.pause_mode_toggle().unwrap();
       }
     }
 
@@ -288,8 +272,8 @@ impl Game {
     ui.print_stats(
       &self.score,
       &(self.snake
-          .lock().unwrap()
-          .get_parts().len() as u16)
+        .lock().unwrap()
+        .get_parts().len() as u16)
     )?;
 
     self.snake
@@ -359,5 +343,11 @@ impl Game {
     }
 
     Ok(())
+  }
+}
+
+impl Drop for Game {
+  fn drop(&mut self) {
+    self.ui.lock().unwrap().disable_raw_mode();
   }
 }

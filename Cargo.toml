@@ -1,7 +1,9 @@
 [package]
 name = "snake"
-version = "1.1.2"
+version = "1.1.3"
 edition = "2021"
+authors = [ "Ghost17" ]
+description = "CLI Snake game"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -13,4 +15,3 @@ rand = "0.8.5"
 opt-level = 3
 strip = true
 lto = "thin"
-panic = "abort"
