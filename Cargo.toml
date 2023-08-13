@@ -15,4 +15,3 @@ rand = "0.8.5"
 opt-level = 3
 strip = true
 lto = "thin"
-panic = "abort"

@@ -17,7 +17,7 @@ use crate::ui::{
 };
 
 use std::{
-  collections::VecDeque,
+  collections::LinkedList,
   io::Result,
   thread::{sleep, self},
   time::Duration,
@@ -41,7 +41,7 @@ pub struct Game {
   score: u16,
   ui: Arc<Mutex<UI>>,
   snake: Arc<Mutex<Snake>>,
-  sequence: Arc<Mutex<VecDeque<Direction>>>,
+  sequence: Arc<Mutex<LinkedList<Direction>>>,
   field_size: Size,
   terminal_size: Size
 }
@@ -65,7 +65,7 @@ impl Game {
       score: 0,
       field_size: ui.field_size,
       snake: Arc::new(Mutex::new(Snake::new(ui.field_size, dir))),
-      sequence: Arc::new(Mutex::new(VecDeque::new())),
+      sequence: Arc::new(Mutex::new(LinkedList::new())),
       ui: Arc::new(Mutex::new(ui)),
       terminal_size: Size::from(terminal::size().unwrap())
     }
@@ -150,7 +150,7 @@ impl Game {
       }
         
       if self.boost.load(Ordering::Acquire) {
-        sleep(Duration::from_millis(140));
+        sleep(Duration::from_millis(150));
       }
       else {
         sleep(Duration::from_millis(200));
