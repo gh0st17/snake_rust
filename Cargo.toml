@@ -8,7 +8,7 @@ description = "CLI Snake game"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-crossterm = "0.26.1"
+crossterm = "0.27.0"
 rand = "0.8.5"
 
 [profile.release]
