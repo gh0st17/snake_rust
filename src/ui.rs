@@ -44,7 +44,7 @@ impl UI {
     }
 
     enable_raw_mode()?;
-    
+
     execute!(
       stdout(),
       terminal::Clear(ClearType::All),
@@ -56,7 +56,7 @@ impl UI {
     let field_size = Size{ width, height };
     let static_ui = StaticUI::new(field_size);
     static_ui.draw()?;
-    
+
     Ok(UI {
       field_size,
       score: Label::new(
@@ -95,7 +95,7 @@ impl UI {
   pub fn print_popup_message(&self, message: &str) -> Result<()> {
     let mut x = terminal::size()?.0 - 14;
     x -= (message.chars().count() as u16 / 2) + 2;
-    
+
     PopupMessage::new(Pos::from((x, 1)), message.to_string()).draw()
   }
 

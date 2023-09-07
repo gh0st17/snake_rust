@@ -210,14 +210,14 @@ mod tests {
     assert_eq!(
       Direction::Down
         .is_opposite(&Direction::Up), true);
-    
+
     assert_eq!(
       Direction::Left
         .is_opposite(&Direction::Right), true);
     assert_eq!(
       Direction::Right
         .is_opposite(&Direction::Left), true);
-    
+
     assert_eq!(
       Direction::Left
         .is_opposite(&Direction::Up), false);
@@ -241,7 +241,7 @@ mod tests {
     assert_eq!(snake_part.get_pos().x, 4);
     snake_part.update(Direction::Right, max_size);
     assert_eq!(snake_part.get_pos().x, 5);
-    
+
     snake_part.set_pos(Pos::from((6, 4)));
     snake_part.update(Direction::Right, Size::from((5, 5)));
     assert_eq!(snake_part.get_pos().x, 2);

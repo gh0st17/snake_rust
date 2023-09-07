@@ -27,7 +27,7 @@ pub struct Symbol {
 impl Symbol {
   pub fn new(pos: Pos) -> Self {
     Self {
-      color: White, 
+      color: White,
       pos,
       ch: ' '
     }

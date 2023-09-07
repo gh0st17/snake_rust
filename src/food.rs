@@ -85,7 +85,7 @@ pub fn generate_food(
       break;
     }
   }
-  
+
   if edible {
     let apple = rng.gen_range(0..=1u16);
     if apple == 0 {

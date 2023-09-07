@@ -50,7 +50,7 @@ impl StaticUI {
   fn print_frame(&self, pos: Pos, size: Size, title: &str) -> Result<()> {
     let title_pos = Pos::from(
       (
-        (size.width / 2 + 1) - 
+        (size.width / 2 + 1) -
         (title.chars().count() as u16 / 2 + 1) +
         pos.x, pos.y
       )

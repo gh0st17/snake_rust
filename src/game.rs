@@ -114,11 +114,11 @@ impl Game {
   }
 
   fn init_food(&self) -> Result<(Box<dyn Food>, Vec<Box<dyn Food>>)> {
-    let apple;    
+    let apple;
     let mut bricks = Vec::new();
-    
+
     let head_pos = self.snake.lock().unwrap().get_head_pos();
-    let density = self.field_size.width as u64 * 
+    let density = self.field_size.width as u64 *
     self.field_size.height as u64 / 100;
 
     for _ in 0..density {
@@ -137,7 +137,7 @@ impl Game {
     self.ui.lock().unwrap().draw_vec(&bricks)?;
 
     Ok((apple, bricks))
-  } 
+  }
 
   fn snake_update(&mut self) -> Result<()> {
     let mut _boost = false;
@@ -148,7 +148,7 @@ impl Game {
       while self.pause.load(Ordering::Acquire) {
         sleep(Duration::from_millis(50));
       }
-        
+
       if self.boost.load(Ordering::Acquire) {
         sleep(Duration::from_millis(150));
       }
@@ -276,7 +276,7 @@ impl Game {
 
   fn food_update(&mut self, apple: &mut Box<dyn Food>,
       bricks: &mut Vec<Box<dyn Food>>) -> Result<()> {
-    
+
     let mut ui = self.ui.lock().unwrap();
 
     self.score += apple.get_value();
@@ -291,7 +291,7 @@ impl Game {
     self.snake
       .lock().unwrap()
       .add_part();
-    
+
     let snake_pos = self.snake
       .lock().unwrap()
       .get_head_pos();
@@ -304,7 +304,7 @@ impl Game {
       if !self.snake
         .lock().unwrap()
         .check_pos(&apple.get_pos()) {
-        
+
         break;
       }
     }
@@ -322,10 +322,10 @@ impl Game {
           .lock().unwrap()
           .check_pos(&bricks[i].get_pos()) ||
             apple.get_pos() == bricks[i].get_pos() {
-          
+
           continue;
         }
-        
+
         for j in 0..bricks.len() {
           if i != j && bricks[i].get_pos() == bricks[j].get_pos() {
             continue 'same;
