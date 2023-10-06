@@ -48,14 +48,6 @@ impl StaticUI {
   }
 
   fn print_frame(&self, pos: Pos, size: Size, title: &str) -> Result<()> {
-    let title_pos = Pos::from(
-      (
-        (size.width / 2 + 1) -
-        (title.chars().count() as u16 / 2 + 1) +
-        pos.x, pos.y
-      )
-    );
-
     execute!(
       io::stdout(),
       MoveTo::from(pos),
@@ -74,6 +66,14 @@ impl StaticUI {
         Print("║".with(Cyan).bold())
       )?;
     }
+
+    let title_pos = Pos::from(
+      (
+        (size.width / 2 + 1) -
+        (title.chars().count() as u16 / 2 + 1) +
+        pos.x, pos.y
+      )
+    );
 
     execute!(
       io::stdout(),
@@ -99,7 +99,7 @@ impl StaticUI {
 
     self.print_frame(
       Pos::from((x, 0)),
-      Size::from((20, 3)),
+      Size::from((16, 3)),
       "Статистика"
     )?;
 

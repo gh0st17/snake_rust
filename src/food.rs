@@ -30,7 +30,7 @@ struct GreenApple(Pos);
 impl Food for GreenApple {
   fn get_symbol(&self) -> Symbol {
     Symbol::new(self.0)
-      .ch('◉')
+      .ch('●')
       .color(Color::Green)
   }
 
@@ -45,7 +45,7 @@ struct GoldApple(Pos);
 impl Food for GoldApple {
   fn get_symbol(&self) -> Symbol {
     Symbol::new(self.0)
-      .ch('◉')
+      .ch('●')
       .color(Color::Yellow)
   }
 

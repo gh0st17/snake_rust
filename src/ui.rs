@@ -93,7 +93,7 @@ impl UI {
   }
 
   pub fn print_popup_message(&self, message: &str) -> Result<()> {
-    let mut x = terminal::size()?.0 - 14;
+    let mut x = terminal::size()?.0 - 16;
     x -= (message.chars().count() as u16 / 2) + 2;
 
     PopupMessage::new(Pos::from((x, 1)), message.to_string()).draw()
