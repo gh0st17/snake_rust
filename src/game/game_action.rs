@@ -3,8 +3,7 @@ use crossterm::event::{
 };
 
 use std::{
-  io::Result,
-  collections::HashMap
+  collections::HashMap, io::Result, time::Duration
 };
 
 #[derive(Clone, Copy)]
@@ -46,8 +45,14 @@ impl KeyController {
   }
 
   pub fn fetch_action(&self) -> Result<KeyAction> {
-    let event = read()?;
+    let event;
     let mut action = KeyAction::None;
+
+    if crossterm::event::poll(Duration::from_millis(100))? {
+      event = read()?;
+    } else {
+      return Ok(action);
+    }
 
     match event {
       Event::Key(key_event) => {

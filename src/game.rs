@@ -22,7 +22,7 @@ use std::{
   thread::{sleep, self},
   time::Duration,
   sync::{
-    Arc, Mutex, Barrier,
+    Arc, Mutex,
     atomic::{AtomicBool, Ordering}
   }
 };
@@ -34,7 +34,6 @@ use crossterm::{
 
 #[derive(Clone)]
 pub struct Game {
-  barrier: Arc<Barrier>,
   stop_bool: Arc<AtomicBool>,
   pause: Arc<AtomicBool>,
   boost: Arc<AtomicBool>,
@@ -58,7 +57,7 @@ impl Game {
     };
 
     Game {
-      barrier: Arc::new(Barrier::new(3)),
+      //barrier: Arc::new(Barrier::new(3)),
       stop_bool: Arc::new(AtomicBool::new(false)),
       pause: Arc::new(AtomicBool::new(false)),
       boost: Arc::new(AtomicBool::new(false)),
@@ -72,24 +71,31 @@ impl Game {
   }
 
   pub fn run(&mut self) {
-    let threads = vec![
+    let functions = vec![
       Self::time_update,
       Self::snake_update,
       Self::fetch_event,
       Self::terminal_size_checker
     ];
 
-    for thread in threads {
+    let mut threads: LinkedList<thread::JoinHandle<()>> = Default::default();
+
+    for function in functions {
       let shared_self = self.clone();
 
-      let _ = thread::spawn(move || {
+      let t = thread::spawn(move || {
         let local_self = &mut shared_self.clone();
-
-        thread(local_self)
+        if let Err(e) = function(local_self) {
+          eprintln!("Ошибка в потоке: {:?}", e);
+        }
       });
+
+      threads.push_back(t);
     }
 
-    self.barrier.wait();
+    for thread in threads {
+      let _ = thread.join();
+    }
   }
 
   fn time_update(&mut self) -> Result<()> {
@@ -109,7 +115,6 @@ impl Game {
       }
     }
 
-    self.barrier.wait();
     Ok(())
   }
 
@@ -160,7 +165,9 @@ impl Game {
         self.snake.lock().unwrap().set_direction(dir)
       }
 
-      if !self.stop_bool.load(Ordering::Acquire) {
+      self.collision_check(&mut apple, &mut bricks)?;
+
+      if !self.stop_bool.load(Ordering::Relaxed) {
         self.snake
           .lock().unwrap()
           .update(self.ui.clone())?;
@@ -172,11 +179,8 @@ impl Game {
       else {
         break;
       }
-
-      self.collision_check(&mut apple, &mut bricks)?;
     }
 
-    self.barrier.wait();
     Ok(())
   }
 
@@ -269,6 +273,10 @@ impl Game {
       if let KeyAction::Pause = action {
         self.pause_mode_toggle().unwrap();
       }
+      
+      if self.stop_bool.load(Ordering::Acquire) {
+        break;
+      }
     }
 
     Ok(())
@@ -351,6 +359,10 @@ impl Game {
       }
       else {
         sleep(Duration::from_millis(200));
+      }
+
+      if self.stop_bool.load(Ordering::Acquire) {
+        break;
       }
     }
 
